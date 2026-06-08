@@ -1,0 +1,12 @@
+import { Router } from 'express';
+import { createExam, getExams, recordGrade, getReportCard } from '../controllers/exam.controller.js';
+import { authenticateToken, authorizeRoles } from '../middlewares/auth.js';
+import { validate } from '../middlewares/validator.js';
+import { examCreateSchema, gradesRecordSchema } from '../validators/schemas.js';
+
+export const examRouter = Router();
+
+examRouter.get('/', authenticateToken, getExams);
+examRouter.post('/', authenticateToken, authorizeRoles('Admin', 'Principal', 'HOD'), validate(examCreateSchema), createExam);
+examRouter.post('/grade', authenticateToken, authorizeRoles('Admin', 'Principal', 'HOD', 'Teacher'), validate(gradesRecordSchema), recordGrade);
+examRouter.get('/report-card/:studentId', authenticateToken, getReportCard);
