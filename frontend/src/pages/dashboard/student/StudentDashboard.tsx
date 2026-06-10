@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { api } from '../../../utils/api.js';
 import { useAuthStore } from '../../../store/authStore.js';
 import { 
@@ -8,7 +9,22 @@ import {
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts';
 
 export default function StudentDashboard() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'overview' | 'grades' | 'schedule' | 'assignments'>('overview');
+
+  useEffect(() => {
+    const path = location.pathname;
+    if (path.endsWith('/exams')) {
+      setActiveTab('grades');
+    } else if (path.endsWith('/assignments')) {
+      setActiveTab('assignments');
+    } else if (path.endsWith('/timetable')) {
+      setActiveTab('schedule');
+    } else {
+      setActiveTab('overview');
+    }
+  }, [location.pathname]);
   const { profile } = useAuthStore();
 
   // API states
@@ -179,15 +195,15 @@ export default function StudentDashboard() {
         {/* Tab switchers */}
         <div className="flex gap-1 bg-slate-900 border border-slate-800 p-1.5 rounded-2xl">
           {[
-            { id: 'overview', label: 'AI Assistant', icon: <Sparkles className="h-4 w-4" /> },
-            { id: 'grades', label: 'Grades & GPA', icon: <Award className="h-4 w-4" /> },
-            { id: 'schedule', label: 'Schedule', icon: <Clock className="h-4 w-4" /> },
-            { id: 'assignments', label: 'Assignments', icon: <BookOpen className="h-4 w-4" /> },
+            { id: 'overview', label: 'AI Assistant', icon: <Sparkles className="h-4 w-4" />, path: '/dashboard' },
+            { id: 'grades', label: 'Grades & GPA', icon: <Award className="h-4 w-4" />, path: '/dashboard/exams' },
+            { id: 'schedule', label: 'Schedule', icon: <Clock className="h-4 w-4" />, path: '/dashboard/timetable' },
+            { id: 'assignments', label: 'Assignments', icon: <BookOpen className="h-4 w-4" />, path: '/dashboard/assignments' },
           ].map((tab) => (
             <button
               key={tab.id}
               onClick={() => {
-                setActiveTab(tab.id as any);
+                navigate(tab.path);
                 setErrorMsg(null);
                 setSuccessMsg(null);
               }}
