@@ -125,7 +125,7 @@ export const query = async (text, params = []) => {
     // Normalize query space for simple regex matching
     const q = text.replace(/\s+/g, ' ').trim();
     // 1. Auth: Find user with email and join role name
-    if (q.includes('FROM users') && q.includes('WHERE email =')) {
+    if (q.includes('FROM users') && (q.includes('email =') || q.includes('u.email ='))) {
         const email = params[0];
         const user = mockDb.users.find((u) => u.email === email);
         if (!user)
@@ -141,7 +141,7 @@ export const query = async (text, params = []) => {
         return { rows: mockDb.roles, rowCount: mockDb.roles.length };
     }
     // 3. User Detail by ID
-    if (q.includes('FROM users') && q.includes('WHERE id =')) {
+    if (q.includes('FROM users') && (q.includes('id =') || q.includes('u.id ='))) {
         const id = params[0];
         const user = mockDb.users.find((u) => u.id === id);
         if (!user)
