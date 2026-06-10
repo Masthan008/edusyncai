@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { api } from '../../../utils/api.js';
 import { 
   Users, BookOpen, Landmark, Building, Calendar, ArrowRight,
@@ -11,7 +12,26 @@ import {
 } from 'recharts';
 
 export default function AdminDashboard() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'overview' | 'students' | 'teachers' | 'departments' | 'timetables' | 'billing'>('overview');
+
+  useEffect(() => {
+    const path = location.pathname;
+    if (path.endsWith('/students')) {
+      setActiveTab('students');
+    } else if (path.endsWith('/teachers')) {
+      setActiveTab('teachers');
+    } else if (path.endsWith('/departments')) {
+      setActiveTab('departments');
+    } else if (path.endsWith('/timetable')) {
+      setActiveTab('timetables');
+    } else if (path.endsWith('/payments')) {
+      setActiveTab('billing');
+    } else {
+      setActiveTab('overview');
+    }
+  }, [location.pathname]);
   
   // States for API data
   const [overview, setOverview] = useState<any>(null);
@@ -326,17 +346,17 @@ export default function AdminDashboard() {
         {/* Custom Tab Switcher */}
         <div className="flex flex-wrap gap-1 bg-slate-900 border border-slate-800 p-1.5 rounded-2xl max-w-full">
           {[
-            { id: 'overview', label: 'Overview' },
-            { id: 'students', label: 'Students' },
-            { id: 'teachers', label: 'Faculty' },
-            { id: 'departments', label: 'Departments' },
-            { id: 'timetables', label: 'Timetables' },
-            { id: 'billing', label: 'Finance' },
+            { id: 'overview', label: 'Overview', path: '/dashboard' },
+            { id: 'students', label: 'Students', path: '/dashboard/students' },
+            { id: 'teachers', label: 'Faculty', path: '/dashboard/teachers' },
+            { id: 'departments', label: 'Departments', path: '/dashboard/departments' },
+            { id: 'timetables', label: 'Timetables', path: '/dashboard/timetable' },
+            { id: 'billing', label: 'Finance', path: '/dashboard/payments' },
           ].map((tab) => (
             <button
               key={tab.id}
               onClick={() => {
-                setActiveTab(tab.id as any);
+                navigate(tab.path);
                 setErrorMsg(null);
                 setSuccessMsg(null);
               }}

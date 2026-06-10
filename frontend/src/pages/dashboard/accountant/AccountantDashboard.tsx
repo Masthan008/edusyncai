@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { api } from '../../../utils/api.js';
 import { 
   Landmark, CreditCard, ClipboardList, Plus, Search, 
@@ -6,7 +7,20 @@ import {
 } from 'lucide-react';
 
 export default function AccountantDashboard() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'collect' | 'ledger' | 'structures'>('collect');
+
+  useEffect(() => {
+    const path = location.pathname;
+    if (path.endsWith('/payments/ledger')) {
+      setActiveTab('ledger');
+    } else if (path.endsWith('/payments')) {
+      setActiveTab('structures');
+    } else {
+      setActiveTab('collect');
+    }
+  }, [location.pathname]);
 
   // Loaded stats
   const [summary, setSummary] = useState<any>(null);
@@ -101,14 +115,14 @@ export default function AccountantDashboard() {
         {/* Tab switchers */}
         <div className="flex gap-1 bg-slate-900 border border-slate-800 p-1.5 rounded-2xl">
           {[
-            { id: 'collect', label: 'Record Collection', icon: <Plus className="h-4 w-4" /> },
-            { id: 'ledger', label: 'Transaction Ledger', icon: <FileSpreadsheet className="h-4 w-4" /> },
-            { id: 'structures', label: 'Fee Catalog', icon: <ClipboardList className="h-4 w-4" /> },
+            { id: 'collect', label: 'Record Collection', icon: <Plus className="h-4 w-4" />, path: '/dashboard' },
+            { id: 'ledger', label: 'Transaction Ledger', icon: <FileSpreadsheet className="h-4 w-4" />, path: '/dashboard/payments/ledger' },
+            { id: 'structures', label: 'Fee Catalog', icon: <ClipboardList className="h-4 w-4" />, path: '/dashboard/payments' },
           ].map((tab) => (
             <button
               key={tab.id}
               onClick={() => {
-                setActiveTab(tab.id as any);
+                navigate(tab.path);
                 setErrorMsg(null);
                 setSuccessMsg(null);
               }}
