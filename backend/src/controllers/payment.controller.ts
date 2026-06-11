@@ -87,8 +87,8 @@ export const getStudentPayments = async (req: Request, res: Response, next: Next
     );
 
     const invoices = duesRes.rows.map((row: any) => {
-      const amount = parseFloat(row.amount);
-      const paid = parseFloat(row.paid_amount);
+      const amount = parseFloat(row.amount) || 0;
+      const paid = parseFloat(row.paid_amount) || 0;
       const balance = amount - paid;
       return {
         id: row.id,

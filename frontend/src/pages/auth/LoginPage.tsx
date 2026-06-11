@@ -113,19 +113,14 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Signup redirect & seed admin credentials */}
-          <div className="pt-4 border-t border-slate-800/60 text-center space-y-4">
+          {/* Signup redirect */}
+          <div className="pt-4 border-t border-slate-800/60 text-center">
             <p className="text-slate-400 text-xs">
               New to EduSync?{' '}
               <Link to="/register" className="text-cyan-400 hover:underline font-bold">
                 Create an account
               </Link>
             </p>
-            <div className="p-3 bg-slate-950/60 border border-slate-800/50 rounded-2xl text-[10px] text-slate-500 text-left space-y-1">
-              <span className="font-bold text-slate-400 block mb-0.5">ℹ️ Default Admin Credentials:</span>
-              <p>Email: <span className="font-mono text-cyan-400">admin@edusync.com</span></p>
-              <p>Password: <span className="font-mono text-cyan-400">admin123</span></p>
-            </div>
           </div>
         </div>
       </div>

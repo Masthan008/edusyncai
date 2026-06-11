@@ -1,179 +1,271 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { api } from '../../../utils/api.js';
 import { useAuthStore } from '../../../store/authStore.js';
-import { 
-  Users, CheckSquare, Award, Landmark, CreditCard, Check, 
+import {
+  Users, CheckSquare, Award, Landmark, CreditCard, Check,
   AlertTriangle, Sparkles, Loader2, RefreshCw, ClipboardList
 } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts';
 
+/* ── Interfaces ─────────────────────────────────────────────────────── */
+
+interface ChildProfile {
+  id: string;
+  first_name: string;
+  last_name: string;
+  class_name: string;
+  section_name: string;
+  roll_number: string;
+  admission_number: string;
+}
+
+interface AttendanceSummary {
+  summary: {
+    attendanceRate: number;
+    total: number;
+    present: number;
+    absent: number;
+  };
+}
+
+interface GradeItem {
+  subject_code: string;
+  marks_obtained: string | number;
+}
+
+interface ReportCard {
+  grades: GradeItem[];
+}
+
+interface Invoice {
+  id: string;
+  name: string;
+  due_date: string;
+  amount: number;
+  balance: number;
+  status: string;
+}
+
+interface Transaction {
+  id: string;
+  transaction_reference: string;
+  payment_date: string;
+  payment_method: string;
+  amount_paid: string;
+  fee_name?: string;
+}
+
+interface BillingInfo {
+  invoices: Invoice[];
+  history: Transaction[];
+}
+
+interface AiInsights {
+  trend: string;
+  riskLevel: string;
+}
+
+/* ── Component ──────────────────────────────────────────────────────── */
+
 export default function ParentDashboard() {
   const { profile } = useAuthStore();
-  const [children, setChildren] = useState<any[]>([]);
+  const [children, setChildren] = useState<ChildProfile[]>([]);
   const [selectedChildId, setSelectedChildId] = useState('');
 
-  // Loaded child details states
-  const [childProfile, setChildProfile] = useState<any>(null);
-  const [attendance, setAttendance] = useState<any>(null);
-  const [reportCard, setReportCard] = useState<any>(null);
-  const [billing, setBilling] = useState<any>({ invoices: [], history: [] });
-  const [aiInsights, setAiInsights] = useState<any>(null);
+  const [childProfile, setChildProfile] = useState<ChildProfile | null>(null);
+  const [attendance, setAttendance] = useState<AttendanceSummary | null>(null);
+  const [reportCard, setReportCard] = useState<ReportCard | null>(null);
+  const [billing, setBilling] = useState<BillingInfo>({ invoices: [], history: [] });
+  const [aiInsights, setAiInsights] = useState<AiInsights | null>(null);
 
-  // Bill payment form state
-  const [activeInvoice, setActiveInvoice] = useState<any>(null);
+  const [activeInvoice, setActiveInvoice] = useState<Invoice | null>(null);
   const [paymentMethod, setPaymentMethod] = useState('Card');
-  
-  // Status Alerts
+  const [receiptTx, setReceiptTx] = useState<Transaction | null>(null);
+
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  /* ── Init children from profile ───────────────────────────────────── */
+
   useEffect(() => {
     if (profile?.children && profile.children.length > 0) {
-      setChildren(profile.children);
+      setChildren(profile.children as ChildProfile[]);
       setSelectedChildId(profile.children[0].id);
     }
   }, [profile]);
 
+  /* ── Fetch child data with AbortController ────────────────────────── */
+
   useEffect(() => {
-    if (selectedChildId) {
-      fetchChildData(selectedChildId);
-    }
+    if (!selectedChildId) return;
+
+    const controller = new AbortController();
+    const { signal } = controller;
+
+    const fetchData = async () => {
+      try {
+        const profRes = await api.get(`/students/${selectedChildId}`, { signal });
+        setChildProfile(profRes.data.data);
+
+        const attRes = await api.get(`/attendance/student/${selectedChildId}`, { signal });
+        setAttendance(attRes.data.data);
+
+        const gradesRes = await api.get(`/exams/report-card/${selectedChildId}`, { signal });
+        setReportCard(gradesRes.data.data);
+
+        const billRes = await api.get(`/payments/student/${selectedChildId}`, { signal });
+        setBilling(billRes.data.data);
+
+        const aiRes = await api.get(`/ai/insights/${selectedChildId}`, { signal });
+        setAiInsights(aiRes.data.data);
+      } catch (e: any) {
+        if (e?.name === 'AbortError' || e?.code === 'ERR_CANCELED') return;
+        setErrorMsg('Failed to load child data. Please try again.');
+      }
+    };
+
+    fetchData();
+    return () => controller.abort();
   }, [selectedChildId]);
 
-  const fetchChildData = async (childId: string) => {
+  const refreshBilling = useCallback(async (childId: string) => {
     try {
-      // 1. Fetch child profile
-      const profRes = await api.get(`/students/${childId}`);
-      setChildProfile(profRes.data.data);
-
-      // 2. Fetch child attendance
-      const attRes = await api.get(`/attendance/student/${childId}`);
-      setAttendance(attRes.data.data);
-
-      // 3. Fetch child grades
-      const gradesRes = await api.get(`/exams/report-card/${childId}`);
-      setReportCard(gradesRes.data.data);
-
-      // 4. Fetch child billing
       const billRes = await api.get(`/payments/student/${childId}`);
       setBilling(billRes.data.data);
+    } catch {
+      setErrorMsg('Failed to refresh billing data.');
+    }
+  }, []);
 
-      // 5. Fetch child AI insights
+  const refreshAiInsights = useCallback(async (childId: string) => {
+    try {
       const aiRes = await api.get(`/ai/insights/${childId}`);
       setAiInsights(aiRes.data.data);
-    } catch (e) {
-      console.error('Error fetching child details:', e);
+    } catch {
+      // non-critical
     }
-  };
+  }, []);
 
-  // Perform card payment
-  const handlePayment = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!activeInvoice) return;
+  /* ── Payment handler ──────────────────────────────────────────────── */
 
-    setLoading(true);
-    setErrorMsg(null);
-    setSuccessMsg(null);
+  const handlePayment = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!activeInvoice) return;
 
-    try {
-      await api.post('/payments/record', {
-        student_id: selectedChildId,
-        fee_structure_id: activeInvoice.id,
-        amount_paid: activeInvoice.balance,
-        payment_method: paymentMethod
-      });
-      setSuccessMsg(`Payment of $${activeInvoice.balance} completed successfully.`);
-      fetchChildData(selectedChildId);
-      setActiveInvoice(null);
-    } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Payment processing failed.');
-    } finally {
-      setLoading(false);
-    }
-  };
+      setLoading(true);
+      setErrorMsg(null);
+      setSuccessMsg(null);
 
-  const printReceipt = (tx: any) => {
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
+      try {
+        await api.post('/payments/record', {
+          student_id: selectedChildId,
+          fee_structure_id: activeInvoice.id,
+          amount_paid: activeInvoice.balance,
+          payment_method: paymentMethod,
+        });
+        setSuccessMsg(`Payment of $${activeInvoice.balance} completed successfully.`);
+        refreshBilling(selectedChildId);
+        refreshAiInsights(selectedChildId);
+        setActiveInvoice(null);
+      } catch (err: any) {
+        setErrorMsg(err.response?.data?.message || 'Payment processing failed.');
+      } finally {
+        setLoading(false);
+      }
+    },
+    [activeInvoice, selectedChildId, paymentMethod, refreshBilling, refreshAiInsights],
+  );
 
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>Receipt - ${tx.transaction_reference}</title>
-          <style>
-            body { font-family: Arial, sans-serif; color: #1e293b; padding: 40px; line-height: 1.5; }
-            .receipt-card { max-w: 600px; margin: 0 auto; border: 1px solid #e2e8f0; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-            .header { border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
-            .logo { font-size: 24px; font-weight: bold; color: #06b6d4; }
-            .title { font-size: 18px; text-transform: uppercase; letter-spacing: 1px; color: #64748b; font-weight: bold; }
-            .grid { display: grid; grid-template-cols: 1fr 1fr; gap: 20px; margin-bottom: 30px; }
-            .label { font-size: 11px; text-transform: uppercase; color: #94a3b8; font-weight: bold; margin-bottom: 2px; }
-            .value { font-size: 14px; color: #334155; font-weight: 600; }
-            .total-section { background-color: #f8fafc; border: 1px solid #f1f5f9; padding: 20px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
-            .total-label { font-size: 16px; font-weight: bold; color: #475569; }
-            .total-value { font-size: 24px; font-weight: 900; color: #0891b2; font-family: monospace; }
-            .footer { text-align: center; margin-top: 40px; font-size: 11px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 20px; }
-          </style>
-        </head>
-        <body>
-          <div class="receipt-card">
-            <div class="header">
-              <div class="logo">EduSync AI</div>
-              <div class="title">Official Receipt</div>
-            </div>
-            
-            <div class="grid">
-              <div>
-                <div class="label">Reference ID</div>
-                <div class="value">${tx.transaction_reference}</div>
-              </div>
-              <div>
-                <div class="label">Payment Date</div>
-                <div class="value">${tx.payment_date.split('T')[0]}</div>
-              </div>
-              <div>
-                <div class="label">Student Name</div>
-                <div class="value">${childProfile?.first_name || 'Student'} ${childProfile?.last_name || ''}</div>
-              </div>
-              <div>
-                <div class="label">Payment Method</div>
-                <div class="value">${tx.payment_method}</div>
-              </div>
-              <div style="grid-column: span 2;">
-                <div class="label">Description</div>
-                <div class="value">${tx.fee_name || 'School Fee Payment'}</div>
-              </div>
-            </div>
+  /* ── Receipt modal ────────────────────────────────────────────────── */
 
-            <div class="total-section">
-              <div class="total-label">Amount Paid</div>
-              <div class="total-value">$${parseFloat(tx.amount_paid).toFixed(2)}</div>
-            </div>
+  const openReceipt = useCallback((tx: Transaction) => {
+    setReceiptTx(tx);
+  }, []);
 
-            <div class="footer">
-              Thank you for your payment. For inquiries, contact the billing office at finance@edusync.com<br>
-              &copy; ${new Date().getFullYear()} EduSync AI Inc. All rights reserved.
-            </div>
-          </div>
-          <script>
-            window.onload = function() {
-              window.print();
-            }
-          </script>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-  };
+  const closeReceipt = useCallback(() => {
+    setReceiptTx(null);
+  }, []);
 
-  const chartData = reportCard?.grades?.map((g: any) => ({
-    name: g.subject_code,
-    value: parseFloat(g.marks_obtained)
-  })) || [];
+  /* ── Memoised chart data ──────────────────────────────────────────── */
+
+  const chartData = useMemo(
+    () =>
+      reportCard?.grades?.map((g: GradeItem) => ({
+        name: g.subject_code,
+        value: parseFloat(String(g.marks_obtained)),
+      })) || [],
+    [reportCard],
+  );
+
+  /* ── Render ───────────────────────────────────────────────────────── */
 
   return (
     <div className="space-y-6 text-slate-100">
+      {/* Receipt Modal */}
+      {receiptTx && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+          onClick={closeReceipt}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Payment Receipt"
+        >
+          <div
+            className="bg-slate-900 border border-slate-700 rounded-3xl p-8 max-w-lg w-full mx-4 shadow-2xl space-y-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center border-b border-slate-700 pb-4">
+              <h2 className="text-lg font-bold text-cyan-400">EduSync AI — Official Receipt</h2>
+              <button
+                onClick={closeReceipt}
+                className="text-slate-500 hover:text-white text-lg leading-none"
+                aria-label="Close receipt"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Reference ID</p>
+                <p className="font-mono text-slate-200 font-semibold">{receiptTx.transaction_reference}</p>
+              </div>
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Payment Date</p>
+                <p className="font-mono text-slate-200 font-semibold">{receiptTx.payment_date.split('T')[0]}</p>
+              </div>
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Student Name</p>
+                <p className="text-slate-200 font-semibold">
+                  {childProfile?.first_name || 'Student'} {childProfile?.last_name || ''}
+                </p>
+              </div>
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Payment Method</p>
+                <p className="text-slate-200 font-semibold">{receiptTx.payment_method}</p>
+              </div>
+              <div className="col-span-2">
+                <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Description</p>
+                <p className="text-slate-200 font-semibold">{receiptTx.fee_name || 'School Fee Payment'}</p>
+              </div>
+            </div>
+
+            <div className="bg-slate-950 border border-slate-700 rounded-2xl p-5 flex justify-between items-center">
+              <span className="font-bold text-slate-300">Amount Paid</span>
+              <span className="text-2xl font-black text-cyan-400 font-mono">
+                ${parseFloat(receiptTx.amount_paid).toFixed(2)}
+              </span>
+            </div>
+
+            <p className="text-[10px] text-slate-600 text-center pt-2 border-t border-slate-800">
+              Thank you for your payment. For inquiries, contact finance@edusync.com
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Header Selector */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-800 pb-4">
         <div>
@@ -181,11 +273,11 @@ export default function ParentDashboard() {
           <p className="text-slate-400 text-sm mt-1">Monitor your children's performance, pay active tuition invoices, and check AI reports.</p>
         </div>
 
-        {/* Children selector list */}
         {children.length > 0 && (
           <div className="flex items-center gap-3">
             <span className="text-slate-500 text-xs font-bold uppercase tracking-wider">Select Student:</span>
             <select
+              aria-label="Select student"
               value={selectedChildId}
               onChange={(e) => {
                 setSelectedChildId(e.target.value);
@@ -205,13 +297,13 @@ export default function ParentDashboard() {
 
       {/* Action Alerts */}
       {successMsg && (
-        <div className="p-4 bg-emerald-950/60 border border-emerald-800/40 rounded-2xl text-emerald-400 text-sm flex items-center gap-2">
+        <div className="p-4 bg-emerald-950/60 border border-emerald-800/40 rounded-2xl text-emerald-400 text-sm flex items-center gap-2" role="alert">
           <Check className="h-5 w-5" />
           <span>{successMsg}</span>
         </div>
       )}
       {errorMsg && (
-        <div className="p-4 bg-rose-950/60 border border-rose-800/40 rounded-2xl text-rose-400 text-sm flex items-center gap-2">
+        <div className="p-4 bg-rose-950/60 border border-rose-800/40 rounded-2xl text-rose-400 text-sm flex items-center gap-2" role="alert">
           <AlertTriangle className="h-5 w-5" />
           <span>{errorMsg}</span>
         </div>
@@ -288,7 +380,7 @@ export default function ParentDashboard() {
           </div>
 
           <div className="space-y-3">
-            {billing.invoices.map((inv: any) => (
+            {billing.invoices.map((inv) => (
               <div key={inv.id} className="p-4 bg-slate-950/40 border border-slate-800 rounded-2xl flex flex-col sm:flex-row justify-between sm:items-center gap-4">
                 <div className="space-y-1">
                   <span className="font-bold text-sm text-slate-200 block">{inv.name}</span>
@@ -308,6 +400,7 @@ export default function ParentDashboard() {
                     <button
                       onClick={() => setActiveInvoice(inv)}
                       className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-3 py-1.5 rounded-lg text-xs flex items-center gap-1 transition"
+                      aria-label={`Pay dues for ${inv.name}`}
                     >
                       <CreditCard className="h-3.5 w-3.5" />
                       <span>Pay Dues</span>
@@ -323,24 +416,26 @@ export default function ParentDashboard() {
             )}
           </div>
 
-          {/* Payment receipt checkout modal/form */}
+          {/* Payment checkout modal/form */}
           {activeInvoice && (
             <div className="p-4 bg-slate-950/60 border border-slate-850 rounded-2xl space-y-4">
               <div className="flex justify-between items-center pb-2 border-b border-slate-850">
                 <span className="font-bold text-xs">Payment Checkout: {activeInvoice.name}</span>
-                <button onClick={() => setActiveInvoice(null)} className="text-slate-500 hover:text-white">✕ Cancel</button>
+                <button onClick={() => setActiveInvoice(null)} className="text-slate-500 hover:text-white" aria-label="Cancel payment">✕ Cancel</button>
               </div>
 
               <form onSubmit={handlePayment} className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end text-xs">
                 <div>
-                  <label className="text-slate-500 block mb-1">Invoice Balance to Pay</label>
-                  <span className="block font-mono text-cyan-400 font-bold text-sm bg-slate-900 border border-slate-800 px-3 py-2 rounded-xl">
+                  <label htmlFor="invoice-balance" className="text-slate-500 block mb-1">Invoice Balance to Pay</label>
+                  <span id="invoice-balance" className="block font-mono text-cyan-400 font-bold text-sm bg-slate-900 border border-slate-800 px-3 py-2 rounded-xl">
                     ${activeInvoice.balance.toFixed(2)}
                   </span>
                 </div>
                 <div>
-                  <label className="text-slate-500 block mb-1">Payment Method</label>
+                  <label htmlFor="payment-method" className="text-slate-500 block mb-1">Payment Method</label>
                   <select
+                    id="payment-method"
+                    aria-label="Payment method"
                     value={paymentMethod}
                     onChange={(e) => setPaymentMethod(e.target.value)}
                     className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2 outline-none"
@@ -353,6 +448,7 @@ export default function ParentDashboard() {
                   type="submit"
                   disabled={loading}
                   className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-1"
+                  aria-label={loading ? 'Processing payment' : 'Complete payment'}
                 >
                   {loading ? 'Processing...' : 'Complete Payment'}
                 </button>
@@ -364,7 +460,7 @@ export default function ParentDashboard() {
           <div className="border-t border-slate-800/60 pt-6 mt-6 space-y-4">
             <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">Transaction Receipt History</span>
             <div className="space-y-2.5">
-              {billing.history && billing.history.map((tx: any) => (
+              {billing.history && billing.history.map((tx) => (
                 <div key={tx.id} className="p-4 bg-slate-950/40 border border-slate-800/80 rounded-2xl flex flex-col sm:flex-row justify-between sm:items-center gap-4 text-xs">
                   <div>
                     <span className="font-bold text-slate-200 block">{tx.fee_name || 'School Fee Payment'}</span>
@@ -376,10 +472,11 @@ export default function ParentDashboard() {
                   <div className="flex items-center gap-4">
                     <span className="font-bold text-emerald-400 font-mono">+${parseFloat(tx.amount_paid).toFixed(2)}</span>
                     <button
-                      onClick={() => printReceipt(tx)}
+                      onClick={() => openReceipt(tx)}
                       className="text-[10px] text-cyan-400 hover:text-cyan-300 font-bold hover:underline transition"
+                      aria-label={`View receipt for ${tx.transaction_reference}`}
                     >
-                      Print Receipt
+                      View Receipt
                     </button>
                   </div>
                 </div>

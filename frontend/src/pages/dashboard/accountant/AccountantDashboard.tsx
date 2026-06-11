@@ -1,17 +1,57 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { api } from '../../../utils/api.js';
 import { 
-  Landmark, CreditCard, ClipboardList, Plus, Search, 
+  Landmark, CreditCard, ClipboardList, Plus, 
   CheckCircle2, AlertTriangle, FileSpreadsheet, Download, RefreshCw
 } from 'lucide-react';
 
+interface Transaction {
+  id: string | number;
+  student_name: string;
+  fee_name: string;
+  transaction_reference: string;
+  payment_date: string;
+  payment_method: string;
+  amount_paid: string | number;
+}
+
+interface Summary {
+  totalRevenue: number;
+  transactionCount: number;
+  recentTransactions: Transaction[];
+}
+
+interface FeeStructure {
+  id: string | number;
+  name: string;
+  amount: string | number;
+  class_name?: string;
+  due_date: string;
+  academic_year_name: string;
+}
+
+interface Student {
+  id: string | number;
+  first_name: string;
+  last_name: string;
+  admission_number: string;
+}
+
+type TabId = 'collect' | 'ledger' | 'structures';
+
+interface TabDef {
+  id: TabId;
+  label: string;
+  icon: React.ReactNode;
+}
+
 export default function AccountantDashboard() {
-  const [activeTab, setActiveTab] = useState<'collect' | 'ledger' | 'structures'>('collect');
+  const [activeTab, setActiveTab] = useState<TabId>('collect');
 
   // Loaded stats
-  const [summary, setSummary] = useState<any>(null);
-  const [feeStructures, setFeeStructures] = useState<any[]>([]);
-  const [students, setStudents] = useState<any[]>([]);
+  const [summary, setSummary] = useState<Summary | null>(null);
+  const [feeStructures, setFeeStructures] = useState<FeeStructure[]>([]);
+  const [students, setStudents] = useState<Student[]>([]);
 
   // Form states
   const [selectedStudent, setSelectedStudent] = useState('');
@@ -25,41 +65,58 @@ export default function AccountantDashboard() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    fetchSummary();
-    fetchStructures();
-    fetchStudents();
+  const fetchSummary = useCallback(async (signal?: AbortSignal) => {
+    try {
+      const res = await api.get('/payments/summary', { signal });
+      if (!signal?.aborted) {
+        setSummary(res.data.data);
+      }
+    } catch (e: unknown) {
+      if (e instanceof DOMException && e.name === 'AbortError') return;
+      const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to load payment summary.';
+      setErrorMsg(msg);
+    }
   }, []);
 
-  const fetchSummary = async () => {
+  const fetchStructures = useCallback(async (signal?: AbortSignal) => {
     try {
-      const res = await api.get('/payments/summary');
-      setSummary(res.data.data);
-    } catch (e) {
-      console.error(e);
+      const res = await api.get('/payments/structures', { signal });
+      if (!signal?.aborted) {
+        setFeeStructures(res.data.data);
+      }
+    } catch (e: unknown) {
+      if (e instanceof DOMException && e.name === 'AbortError') return;
+      const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to load fee structures.';
+      setErrorMsg(msg);
     }
-  };
+  }, []);
 
-  const fetchStructures = async () => {
+  const fetchStudents = useCallback(async (signal?: AbortSignal) => {
     try {
-      const res = await api.get('/payments/structures');
-      setFeeStructures(res.data.data);
-    } catch (e) {
-      console.error(e);
+      const res = await api.get('/students', { signal });
+      if (!signal?.aborted) {
+        setStudents(res.data.data);
+      }
+    } catch (e: unknown) {
+      if (e instanceof DOMException && e.name === 'AbortError') return;
+      const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to load students.';
+      setErrorMsg(msg);
     }
-  };
+  }, []);
 
-  const fetchStudents = async () => {
-    try {
-      const res = await api.get('/students');
-      setStudents(res.data.data);
-    } catch (e) {
-      console.error(e);
-    }
-  };
+  useEffect(() => {
+    const controller = new AbortController();
+    const { signal } = controller;
+
+    fetchSummary(signal);
+    fetchStructures(signal);
+    fetchStudents(signal);
+
+    return () => controller.abort();
+  }, [fetchSummary, fetchStructures, fetchStudents]);
 
   // Record a payment manual entry
-  const handleRecordPayment = async (e: React.FormEvent) => {
+  const handleRecordPayment = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedStudent || !selectedFee || !amountPaid) return;
 
@@ -82,15 +139,26 @@ export default function AccountantDashboard() {
       setSelectedFee('');
       setAmountPaid('');
       setTxnRef('');
-    } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Failed to record payment in database ledger.');
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to record payment in database ledger.';
+      setErrorMsg(msg);
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedStudent, selectedFee, amountPaid, payMethod, txnRef, fetchSummary]);
+
+  const tabs: TabDef[] = useMemo(() => [
+    { id: 'collect', label: 'Record Collection', icon: <Plus className="h-4 w-4" /> },
+    { id: 'ledger', label: 'Transaction Ledger', icon: <FileSpreadsheet className="h-4 w-4" /> },
+    { id: 'structures', label: 'Fee Catalog', icon: <ClipboardList className="h-4 w-4" /> },
+  ], []);
+
+  const handleReceiptDownload = useCallback((txRef: string) => {
+    setSuccessMsg(`Simulated receipt PDF download generated for reference: ${txRef}`);
+  }, []);
 
   return (
-    <div className="space-y-6 text-slate-100">
+    <div className="space-y-6 text-slate-100" role="main" aria-label="Finance Office Dashboard">
       {/* Title block */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-800 pb-4">
         <div>
@@ -99,16 +167,15 @@ export default function AccountantDashboard() {
         </div>
 
         {/* Tab switchers */}
-        <div className="flex gap-1 bg-slate-900 border border-slate-800 p-1.5 rounded-2xl">
-          {[
-            { id: 'collect', label: 'Record Collection', icon: <Plus className="h-4 w-4" /> },
-            { id: 'ledger', label: 'Transaction Ledger', icon: <FileSpreadsheet className="h-4 w-4" /> },
-            { id: 'structures', label: 'Fee Catalog', icon: <ClipboardList className="h-4 w-4" /> },
-          ].map((tab) => (
+        <div className="flex gap-1 bg-slate-900 border border-slate-800 p-1.5 rounded-2xl" role="tablist" aria-label="Dashboard sections">
+          {tabs.map((tab) => (
             <button
               key={tab.id}
+              role="tab"
+              aria-selected={activeTab === tab.id}
+              aria-label={tab.label}
               onClick={() => {
-                setActiveTab(tab.id as any);
+                setActiveTab(tab.id);
                 setErrorMsg(null);
                 setSuccessMsg(null);
               }}
@@ -125,13 +192,13 @@ export default function AccountantDashboard() {
 
       {/* Alerts */}
       {successMsg && (
-        <div className="p-4 bg-emerald-950/60 border border-emerald-800/40 rounded-2xl text-emerald-400 text-sm flex items-center gap-2">
+        <div className="p-4 bg-emerald-950/60 border border-emerald-800/40 rounded-2xl text-emerald-400 text-sm flex items-center gap-2" role="alert" aria-live="polite">
           <CheckCircle2 className="h-5 w-5" />
           <span>{successMsg}</span>
         </div>
       )}
       {errorMsg && (
-        <div className="p-4 bg-rose-950/60 border border-rose-800/40 rounded-2xl text-rose-400 text-sm flex items-center gap-2">
+        <div className="p-4 bg-rose-950/60 border border-rose-800/40 rounded-2xl text-rose-400 text-sm flex items-center gap-2" role="alert" aria-live="assertive">
           <AlertTriangle className="h-5 w-5" />
           <span>{errorMsg}</span>
         </div>
@@ -142,11 +209,11 @@ export default function AccountantDashboard() {
         <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-3xl flex justify-between items-center shadow-lg">
           <div>
             <span className="text-slate-500 text-[10px] font-bold uppercase tracking-wider block">Total College Revenue</span>
-            <span className="text-3xl font-black text-emerald-400 mt-1 block">
+            <span className="text-3xl font-black text-emerald-400 mt-1 block" aria-label={`Total revenue $${summary?.totalRevenue?.toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00'}`}>
               ${summary?.totalRevenue?.toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00'}
             </span>
           </div>
-          <div className="h-10 w-10 bg-slate-850 rounded-xl border border-slate-800 flex items-center justify-center text-cyan-400 shrink-0">
+          <div className="h-10 w-10 bg-slate-850 rounded-xl border border-slate-800 flex items-center justify-center text-cyan-400 shrink-0" aria-hidden="true">
             <Landmark className="h-5.5 w-5.5" />
           </div>
         </div>
@@ -154,11 +221,11 @@ export default function AccountantDashboard() {
         <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-3xl flex justify-between items-center shadow-lg">
           <div>
             <span className="text-slate-500 text-[10px] font-bold uppercase tracking-wider block">Total Transaction Entries</span>
-            <span className="text-3xl font-black text-slate-200 mt-1 block">
+            <span className="text-3xl font-black text-slate-200 mt-1 block" aria-label={`${summary?.transactionCount || 0} total invoices`}>
               {summary?.transactionCount || 0} invoices
             </span>
           </div>
-          <div className="h-10 w-10 bg-slate-850 rounded-xl border border-slate-800 flex items-center justify-center text-cyan-400 shrink-0">
+          <div className="h-10 w-10 bg-slate-850 rounded-xl border border-slate-800 flex items-center justify-center text-cyan-400 shrink-0" aria-hidden="true">
             <CreditCard className="h-5.5 w-5.5" />
           </div>
         </div>
@@ -166,20 +233,22 @@ export default function AccountantDashboard() {
 
       {/* TAB CONTENT: RECORD COLLECTION */}
       {activeTab === 'collect' && (
-        <div className="bg-slate-900/60 border border-slate-800 p-8 rounded-3xl max-w-2xl mx-auto space-y-6">
+        <div className="bg-slate-900/60 border border-slate-800 p-8 rounded-3xl max-w-2xl mx-auto space-y-6" role="tabpanel" aria-label="Record Collection">
           <div className="border-b border-slate-800 pb-3">
             <h2 className="text-lg font-bold">Log Student Fees Collection</h2>
             <p className="text-slate-500 text-xs mt-0.5">Enter direct card checkouts, cash drafts, or bank checks manually here.</p>
           </div>
 
-          <form onSubmit={handleRecordPayment} className="space-y-4 text-xs font-semibold">
+          <form onSubmit={handleRecordPayment} className="space-y-4 text-xs font-semibold" aria-label="Record payment form">
             <div>
-              <label className="text-slate-400 block mb-1">Select Student</label>
+              <label className="text-slate-400 block mb-1" htmlFor="student-select">Select Student</label>
               <select
+                id="student-select"
                 required
                 value={selectedStudent}
                 onChange={(e) => setSelectedStudent(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 outline-none text-slate-200 text-xs"
+                aria-label="Select enrolled student"
               >
                 <option value="">Select Enrolled Student</option>
                 {students.map(s => <option key={s.id} value={s.id}>{s.first_name} {s.last_name} ({s.admission_number})</option>)}
@@ -187,36 +256,42 @@ export default function AccountantDashboard() {
             </div>
 
             <div>
-              <label className="text-slate-400 block mb-1">Fee Structure Dues Category</label>
+              <label className="text-slate-400 block mb-1" htmlFor="fee-select">Fee Structure Dues Category</label>
               <select
+                id="fee-select"
                 required
                 value={selectedFee}
                 onChange={(e) => setSelectedFee(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 outline-none text-slate-200 text-xs"
+                aria-label="Select fee structure"
               >
                 <option value="">Select Dues Category</option>
-                {feeStructures.map(f => <option key={f.id} value={f.id}>{f.name} (${parseFloat(f.amount).toFixed(2)})</option>)}
+                {feeStructures.map(f => <option key={f.id} value={f.id}>{f.name} (${parseFloat(String(f.amount)).toFixed(2)})</option>)}
               </select>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="text-slate-400 block mb-1">Amount Collected ($)</label>
+                <label className="text-slate-400 block mb-1" htmlFor="amount-paid">Amount Collected ($)</label>
                 <input
+                  id="amount-paid"
                   type="number" required min={1} step="0.01"
                   value={amountPaid}
                   onChange={(e) => setAmountPaid(e.target.value)}
                   placeholder="e.g. 1200.00"
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 outline-none focus:border-cyan-500 text-slate-200 text-xs font-mono font-bold"
+                  aria-label="Amount collected in dollars"
                 />
               </div>
 
               <div>
-                <label className="text-slate-400 block mb-1">Payment Method</label>
+                <label className="text-slate-400 block mb-1" htmlFor="payment-method">Payment Method</label>
                 <select
+                  id="payment-method"
                   value={payMethod}
                   onChange={(e) => setPayMethod(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 outline-none text-slate-200 text-xs font-bold"
+                  aria-label="Select payment method"
                 >
                   <option value="Card">Online Credit Card</option>
                   <option value="Cash">Cash Draft Receipt</option>
@@ -226,13 +301,15 @@ export default function AccountantDashboard() {
             </div>
 
             <div>
-              <label className="text-slate-400 block mb-1">Bank Check/Txn Ref No. (Optional)</label>
+              <label className="text-slate-400 block mb-1" htmlFor="txn-ref">Bank Check/Txn Ref No. (Optional)</label>
               <input
+                id="txn-ref"
                 type="text"
                 value={txnRef}
                 onChange={(e) => setTxnRef(e.target.value)}
                 placeholder="e.g. CHK-992384"
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 outline-none focus:border-cyan-500 text-slate-200 text-xs font-mono"
+                aria-label="Transaction reference number"
               />
               <span className="text-[10px] text-slate-500 block font-normal mt-1">Leaves default simulated reference if left empty.</span>
             </div>
@@ -241,6 +318,7 @@ export default function AccountantDashboard() {
               type="submit"
               disabled={loading}
               className="w-full bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold py-3 rounded-xl transition text-xs shadow-md"
+              aria-label={loading ? 'Recording payment' : 'Log collection receipt'}
             >
               {loading ? 'Recording in Ledger...' : 'Log Collection Receipt'}
             </button>
@@ -250,12 +328,13 @@ export default function AccountantDashboard() {
 
       {/* TAB CONTENT: TRANSACTION LEDGER */}
       {activeTab === 'ledger' && (
-        <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-3xl space-y-4">
+        <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-3xl space-y-4" role="tabpanel" aria-label="Transaction Ledger">
           <div className="flex justify-between items-center border-b border-slate-800 pb-3">
             <h2 className="text-lg font-bold">Transactions Audit Ledger</h2>
             <button 
-              onClick={fetchSummary}
+              onClick={() => fetchSummary()}
               className="text-xs text-cyan-400 hover:underline flex items-center gap-1"
+              aria-label="Refresh transaction ledger"
             >
               <RefreshCw className="h-3.5 w-3.5" />
               <span>Refresh Ledger</span>
@@ -263,20 +342,20 @@ export default function AccountantDashboard() {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-xs text-left border-collapse">
+            <table className="w-full text-xs text-left border-collapse" aria-label="Transactions table">
               <thead>
                 <tr className="border-b border-slate-800/80 text-slate-500">
-                  <th className="py-3 font-semibold">Student Name</th>
-                  <th className="py-3 font-semibold">Category Fee Item</th>
-                  <th className="py-3 font-semibold">Transaction Ref No</th>
-                  <th className="py-3 font-semibold">Payment Date</th>
-                  <th className="py-3 font-semibold">Method</th>
-                  <th className="py-3 font-semibold">Amount Paid</th>
-                  <th className="py-3 text-right font-semibold">Receipt</th>
+                  <th className="py-3 font-semibold" scope="col">Student Name</th>
+                  <th className="py-3 font-semibold" scope="col">Category Fee Item</th>
+                  <th className="py-3 font-semibold" scope="col">Transaction Ref No</th>
+                  <th className="py-3 font-semibold" scope="col">Payment Date</th>
+                  <th className="py-3 font-semibold" scope="col">Method</th>
+                  <th className="py-3 font-semibold" scope="col">Amount Paid</th>
+                  <th className="py-3 text-right font-semibold" scope="col">Receipt</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/40">
-                {summary?.recentTransactions?.map((tx: any) => (
+                {summary?.recentTransactions?.map((tx: Transaction) => (
                   <tr key={tx.id} className="hover:bg-slate-850/30">
                     <td className="py-3 font-bold text-slate-200">{tx.student_name}</td>
                     <td className="py-3">{tx.fee_name}</td>
@@ -287,12 +366,12 @@ export default function AccountantDashboard() {
                         {tx.payment_method}
                       </span>
                     </td>
-                    <td className="py-3 font-mono font-bold text-emerald-400">${parseFloat(tx.amount_paid).toFixed(2)}</td>
+                    <td className="py-3 font-mono font-bold text-emerald-400">${parseFloat(String(tx.amount_paid)).toFixed(2)}</td>
                     <td className="py-3 text-right">
                       <button 
-                        onClick={() => alert(`Simulated receipt PDF download generated for reference: ${tx.transaction_reference}`)}
+                        onClick={() => handleReceiptDownload(tx.transaction_reference)}
                         className="p-1 hover:bg-slate-800 rounded-lg transition text-slate-400 hover:text-cyan-400"
-                        title="Download Receipt"
+                        aria-label={`Download receipt for transaction ${tx.transaction_reference}`}
                       >
                         <Download className="h-4 w-4" />
                       </button>
@@ -312,26 +391,26 @@ export default function AccountantDashboard() {
 
       {/* TAB CONTENT: FEE STRUCTURES CATALOG */}
       {activeTab === 'structures' && (
-        <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-3xl space-y-4">
+        <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-3xl space-y-4" role="tabpanel" aria-label="Fee Catalog">
           <h2 className="text-lg font-bold border-b border-slate-800 pb-3">Active Tuition Invoices Catalog</h2>
           
           <div className="overflow-x-auto">
-            <table className="w-full text-xs text-left border-collapse">
+            <table className="w-full text-xs text-left border-collapse" aria-label="Fee structures table">
               <thead>
                 <tr className="border-b border-slate-800/80 text-slate-500">
-                  <th className="py-3 font-semibold">Structure Name</th>
-                  <th className="py-3 font-semibold">Grade Scope</th>
-                  <th className="py-3 font-semibold">Dues Amount</th>
-                  <th className="py-3 font-semibold">Due Date</th>
-                  <th className="py-3 font-semibold">Academic Year</th>
+                  <th className="py-3 font-semibold" scope="col">Structure Name</th>
+                  <th className="py-3 font-semibold" scope="col">Grade Scope</th>
+                  <th className="py-3 font-semibold" scope="col">Dues Amount</th>
+                  <th className="py-3 font-semibold" scope="col">Due Date</th>
+                  <th className="py-3 font-semibold" scope="col">Academic Year</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/40">
-                {feeStructures.map((f) => (
+                {feeStructures.map((f: FeeStructure) => (
                   <tr key={f.id} className="hover:bg-slate-850/30">
                     <td className="py-3 font-bold text-slate-200">{f.name}</td>
                     <td className="py-3">{f.class_name || 'All Classes'}</td>
-                    <td className="py-3 font-mono font-bold text-cyan-400">${parseFloat(f.amount).toFixed(2)}</td>
+                    <td className="py-3 font-mono font-bold text-cyan-400">${parseFloat(String(f.amount)).toFixed(2)}</td>
                     <td className="py-3 font-mono">{f.due_date.split('T')[0]}</td>
                     <td className="py-3 text-slate-400">{f.academic_year_name}</td>
                   </tr>

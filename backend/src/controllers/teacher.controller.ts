@@ -27,15 +27,20 @@ export const getTeachers = async (req: Request, res: Response, next: NextFunctio
     sql += ' ORDER BY t.first_name ASC';
     const teachersRes = await query(sql, params);
 
-    // Fetch workloads (number of timetable classes assigned to each teacher)
-    const teachers = teachersRes.rows;
-    for (const teacher of teachers) {
-      const workloadRes = await query(
-        'SELECT COUNT(*)::int as class_count FROM timetables WHERE teacher_id = $1',
-        [teacher.id]
-      );
-      teacher.workload = workloadRes.rows[0]?.class_count || 0;
-    }
+    // Fetch workloads for all teachers in one query
+    const workloadRes = await query(
+      `SELECT teacher_id, COUNT(*)::int as class_count
+       FROM timetables
+       WHERE teacher_id = ANY($1)
+       GROUP BY teacher_id`,
+      [teachersRes.rows.length > 0 ? teachersRes.rows.map((t: any) => t.id) : ['']
+    ]);
+    const workloadMap = new Map(workloadRes.rows.map((r: any) => [r.teacher_id, r.class_count]));
+
+    const teachers = teachersRes.rows.map((t: any) => ({
+      ...t,
+      workload: workloadMap.get(t.id) || 0,
+    }));
 
     return res.status(200).json({
       success: true,
@@ -115,7 +120,7 @@ export const createTeacher = async (req: Request, res: Response, next: NextFunct
     const roleId = roleRes.rows[0].id;
 
     // 3. Create User
-    const passwordHash = bcrypt.hashSync(password, 10);
+    const passwordHash = await bcrypt.hash(password, 10);
     const userInsert = await query(
       'INSERT INTO users (email, password_hash, role_id) VALUES ($1, $2, $3) RETURNING id',
       [email, passwordHash, roleId]

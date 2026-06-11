@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { api } from '../../../utils/api.js';
 import { useAuthStore } from '../../../store/authStore.js';
 import { 
@@ -7,28 +7,97 @@ import {
 } from 'lucide-react';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts';
 
+// --- Interfaces ---
+interface AttendanceSummary {
+  attendanceRate: number;
+  present: number;
+  absent: number;
+}
+
+interface AttendanceData {
+  summary: AttendanceSummary;
+}
+
+interface GradeData {
+  id: string;
+  subject_code: string;
+  subject_name: string;
+  marks_obtained: number;
+  max_marks: number;
+  letter_grade: string;
+  grade_point: number;
+}
+
+interface ReportCard {
+  summary: {
+    gpa: number;
+  };
+  grades: GradeData[];
+}
+
+interface ScheduleSlot {
+  id: string;
+  subject_name: string;
+  teacher_name: string;
+  room: string;
+  day_of_week: number;
+  start_time: string;
+  end_time: string;
+}
+
+interface Assignment {
+  id: string;
+  title: string;
+  description: string;
+  subject_name: string;
+  due_date: string;
+  max_marks: number;
+}
+
+interface Submission {
+  assignment_id: string;
+  status: string;
+  marks_obtained: number;
+  max_marks: number;
+  student_id: string;
+}
+
+interface AiInsights {
+  riskLevel: string;
+  trend: string;
+  suggestions: string[];
+}
+
+interface ChatMessage {
+  sender: 'user' | 'ai';
+  text: string;
+}
+
+// --- Config ---
+const DEFAULT_SUBMISSION_URL_PREFIX = 'http://school-storage.internal/uploads/';
+
 export default function StudentDashboard() {
   const [activeTab, setActiveTab] = useState<'overview' | 'grades' | 'schedule' | 'assignments'>('overview');
   const { profile } = useAuthStore();
 
   // API states
-  const [attendance, setAttendance] = useState<any>(null);
-  const [reportCard, setReportCard] = useState<any>(null);
-  const [schedule, setSchedule] = useState<any[]>([]);
-  const [assignments, setAssignments] = useState<any[]>([]);
-  const [submissions, setSubmissions] = useState<any[]>([]);
-  const [aiInsights, setAiInsights] = useState<any>(null);
+  const [attendance, setAttendance] = useState<AttendanceData | null>(null);
+  const [reportCard, setReportCard] = useState<ReportCard | null>(null);
+  const [schedule, setSchedule] = useState<ScheduleSlot[]>([]);
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [aiInsights, setAiInsights] = useState<AiInsights | null>(null);
   const [reportSummary, setReportSummary] = useState<string>('');
 
   // AI chat state
   const [chatInput, setChatInput] = useState('');
-  const [chatMessages, setChatMessages] = useState<Array<{ sender: 'user' | 'ai'; text: string }>>([
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     { sender: 'ai', text: "Hello! I'm your EduSync AI Assistant. Ask me anything about your chemistry exam grades, upcoming due assignments, or attendance rates." }
   ]);
   const [aiLoading, setAiLoading] = useState(false);
 
   // Homework submit state
-  const [selectedAssign, setSelectedAssign] = useState<any>(null);
+  const [selectedAssign, setSelectedAssign] = useState<Assignment | null>(null);
   const [fileUrl, setFileUrl] = useState('');
   const [notes, setNotes] = useState('');
 
@@ -37,80 +106,115 @@ export default function StudentDashboard() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (profile?.id) {
-      fetchAttendance();
-      fetchReportCard();
-      fetchSchedule();
-      fetchAssignments();
-      fetchAiInsights();
-    }
-  }, [profile]);
+  // Loading states for initial data
+  const [attendanceLoading, setAttendanceLoading] = useState(true);
+  const [reportCardLoading, setReportCardLoading] = useState(true);
+  const [scheduleLoading, setScheduleLoading] = useState(true);
+  const [assignmentsLoading, setAssignmentsLoading] = useState(true);
+  const [insightsLoading, setInsightsLoading] = useState(true);
 
-  const fetchAttendance = async () => {
+  // AbortController ref
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  const fetchAttendance = useCallback(async (signal?: AbortSignal) => {
+    if (!profile?.id) return;
+    setAttendanceLoading(true);
     try {
-      const res = await api.get(`/attendance/student/${profile.id}`);
+      const res = await api.get(`/attendance/student/${profile.id}`, { signal });
       setAttendance(res.data.data);
-    } catch (e) {
-      console.error(e);
+    } catch (e: any) {
+      if (e.name !== 'CanceledError') setErrorMsg('Failed to load attendance data.');
+    } finally {
+      setAttendanceLoading(false);
     }
-  };
+  }, [profile?.id]);
 
-  const fetchReportCard = async () => {
+  const fetchAiReportSummary = useCallback(async (signal?: AbortSignal) => {
+    if (!profile?.id) return;
     try {
-      const res = await api.get(`/exams/report-card/${profile.id}`);
+      const res = await api.get(`/ai/report-summary/${profile.id}`, { signal });
+      setReportSummary(res.data.summary);
+    } catch (e: any) {
+      if (e.name !== 'CanceledError') setErrorMsg('Failed to load AI report summary.');
+    }
+  }, [profile?.id]);
+
+  const fetchReportCard = useCallback(async (signal?: AbortSignal) => {
+    if (!profile?.id) return;
+    setReportCardLoading(true);
+    try {
+      const res = await api.get(`/exams/report-card/${profile.id}`, { signal });
       setReportCard(res.data.data);
-      // Fetch AI report summary once grades load
-      fetchAiReportSummary();
-    } catch (e) {
-      console.error(e);
+      fetchAiReportSummary(signal);
+    } catch (e: any) {
+      if (e.name !== 'CanceledError') setErrorMsg('Failed to load report card data.');
+    } finally {
+      setReportCardLoading(false);
     }
-  };
+  }, [profile?.id, fetchAiReportSummary]);
 
-  const fetchSchedule = async () => {
+  const fetchSchedule = useCallback(async (signal?: AbortSignal) => {
     if (!profile?.class_id || !profile?.section_id) return;
+    setScheduleLoading(true);
     try {
-      const res = await api.get(`/timetables/class/${profile.class_id}/${profile.section_id}`);
+      const res = await api.get(`/timetables/class/${profile.class_id}/${profile.section_id}`, { signal });
       setSchedule(res.data.data);
-    } catch (e) {
-      console.error(e);
+    } catch (e: any) {
+      if (e.name !== 'CanceledError') setErrorMsg('Failed to load schedule data.');
+    } finally {
+      setScheduleLoading(false);
     }
-  };
+  }, [profile?.class_id, profile?.section_id]);
 
-  const fetchAssignments = async () => {
+  const fetchAssignments = useCallback(async (signal?: AbortSignal) => {
     if (!profile?.class_id || !profile?.section_id) return;
+    setAssignmentsLoading(true);
     try {
-      const res = await api.get(`/assignments?classId=${profile.class_id}&sectionId=${profile.section_id}`);
+      const res = await api.get(`/assignments?classId=${profile.class_id}&sectionId=${profile.section_id}`, { signal });
       setAssignments(res.data.data);
       
-      // Fetch student's own submissions
-      const subRes = await api.get('/assignments/submissions');
-      setSubmissions(subRes.data.data.filter((s: any) => s.student_id === profile.id));
-    } catch (e) {
-      console.error(e);
+      const subRes = await api.get('/assignments/submissions', { signal });
+      setSubmissions(subRes.data.data.filter((s: Submission) => s.student_id === profile.id));
+    } catch (e: any) {
+      if (e.name !== 'CanceledError') setErrorMsg('Failed to load assignments.');
+    } finally {
+      setAssignmentsLoading(false);
     }
-  };
+  }, [profile?.class_id, profile?.section_id, profile?.id]);
 
-  const fetchAiInsights = async () => {
+  const fetchAiInsights = useCallback(async (signal?: AbortSignal) => {
+    if (!profile?.id) return;
+    setInsightsLoading(true);
     try {
-      const res = await api.get(`/ai/insights/${profile.id}`);
+      const res = await api.get(`/ai/insights/${profile.id}`, { signal });
       setAiInsights(res.data.data);
-    } catch (e) {
-      console.error(e);
+    } catch (e: any) {
+      if (e.name !== 'CanceledError') setErrorMsg('Failed to load AI insights.');
+    } finally {
+      setInsightsLoading(false);
     }
-  };
+  }, [profile?.id]);
 
-  const fetchAiReportSummary = async () => {
-    try {
-      const res = await api.get(`/ai/report-summary/${profile.id}`);
-      setReportSummary(res.data.summary);
-    } catch (e) {
-      console.error(e);
+  useEffect(() => {
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    const signal = controller.signal;
+
+    if (profile?.id) {
+      fetchAttendance(signal);
+      fetchReportCard(signal);
+      fetchSchedule(signal);
+      fetchAssignments(signal);
+      fetchAiInsights(signal);
     }
-  };
+
+    return () => {
+      controller.abort();
+    };
+  }, [profile, fetchAttendance, fetchReportCard, fetchSchedule, fetchAssignments, fetchAiInsights]);
 
   // Submit Homework Roster
-  const handleHomeworkSubmit = async (e: React.FormEvent) => {
+  const handleHomeworkSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedAssign) return;
 
@@ -121,7 +225,7 @@ export default function StudentDashboard() {
     try {
       await api.post('/assignments/submit', {
         assignment_id: selectedAssign.id,
-        file_url: fileUrl || `http://school-storage.internal/uploads/assignment_${Date.now()}.pdf`,
+        file_url: fileUrl || `${DEFAULT_SUBMISSION_URL_PREFIX}assignment_${Date.now()}.pdf`,
         student_notes: notes
       });
       setSuccessMsg('Assignment submitted successfully.');
@@ -134,10 +238,10 @@ export default function StudentDashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedAssign, fileUrl, notes, fetchAssignments]);
 
   // AI Chat Request
-  const handleSendMessage = async (e: React.FormEvent) => {
+  const handleSendMessage = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     if (!chatInput.trim()) return;
 
@@ -149,7 +253,7 @@ export default function StudentDashboard() {
     try {
       const res = await api.post('/ai/assistant', {
         question: userText,
-        studentId: profile.id
+        studentId: profile?.id
       });
       setChatMessages(prev => [...prev, { sender: 'ai', text: res.data.reply }]);
     } catch (err: any) {
@@ -157,15 +261,22 @@ export default function StudentDashboard() {
     } finally {
       setAiLoading(false);
     }
-  };
+  }, [chatInput, profile?.id]);
 
   // Attendance rate indicator colors
-  const attRate = attendance?.summary?.attendanceRate || 100;
-  const pieData = [
+  const attRate = attendance?.summary?.attendanceRate ?? 100;
+  const pieData = useMemo(() => [
     { name: 'Attended', value: attRate },
     { name: 'Missed', value: Math.max(0, 100 - attRate) }
-  ];
+  ], [attRate]);
   const COLORS = ['#06b6d4', '#1e293b'];
+
+  const tabs = useMemo(() => [
+    { id: 'overview' as const, label: 'AI Assistant', icon: <Sparkles className="h-4 w-4" /> },
+    { id: 'grades' as const, label: 'Grades & GPA', icon: <Award className="h-4 w-4" /> },
+    { id: 'schedule' as const, label: 'Schedule', icon: <Clock className="h-4 w-4" /> },
+    { id: 'assignments' as const, label: 'Assignments', icon: <BookOpen className="h-4 w-4" /> },
+  ], []);
 
   return (
     <div className="space-y-6 text-slate-100">
@@ -177,20 +288,18 @@ export default function StudentDashboard() {
         </div>
 
         {/* Tab switchers */}
-        <div className="flex gap-1 bg-slate-900 border border-slate-800 p-1.5 rounded-2xl">
-          {[
-            { id: 'overview', label: 'AI Assistant', icon: <Sparkles className="h-4 w-4" /> },
-            { id: 'grades', label: 'Grades & GPA', icon: <Award className="h-4 w-4" /> },
-            { id: 'schedule', label: 'Schedule', icon: <Clock className="h-4 w-4" /> },
-            { id: 'assignments', label: 'Assignments', icon: <BookOpen className="h-4 w-4" /> },
-          ].map((tab) => (
+        <div className="flex gap-1 bg-slate-900 border border-slate-800 p-1.5 rounded-2xl" role="tablist" aria-label="Dashboard sections">
+          {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => {
-                setActiveTab(tab.id as any);
+                setActiveTab(tab.id);
                 setErrorMsg(null);
                 setSuccessMsg(null);
               }}
+              role="tab"
+              aria-selected={activeTab === tab.id}
+              aria-label={`${tab.label} tab`}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition ${
                 activeTab === tab.id ? 'bg-cyan-500 text-slate-950' : 'text-slate-400 hover:text-white'
               }`}
@@ -204,14 +313,14 @@ export default function StudentDashboard() {
 
       {/* Alerts */}
       {successMsg && (
-        <div className="p-4 bg-emerald-950/60 border border-emerald-800/40 rounded-2xl text-emerald-400 text-sm flex items-center gap-2">
-          <CheckCircle2 className="h-5 w-5" />
+        <div role="alert" className="p-4 bg-emerald-950/60 border border-emerald-800/40 rounded-2xl text-emerald-400 text-sm flex items-center gap-2">
+          <CheckCircle2 className="h-5 w-5" aria-hidden="true" />
           <span>{successMsg}</span>
         </div>
       )}
       {errorMsg && (
-        <div className="p-4 bg-rose-950/60 border border-rose-800/40 rounded-2xl text-rose-400 text-sm flex items-center gap-2">
-          <AlertCircle className="h-5 w-5" />
+        <div role="alert" className="p-4 bg-rose-950/60 border border-rose-800/40 rounded-2xl text-rose-400 text-sm flex items-center gap-2">
+          <AlertCircle className="h-5 w-5" aria-hidden="true" />
           <span>{errorMsg}</span>
         </div>
       )}
@@ -227,39 +336,51 @@ export default function StudentDashboard() {
                 <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">Attendance Rate</span>
                 <h2 className="text-base font-bold">Class Presence</h2>
               </div>
-              <div className="h-[150px] w-full mt-2 relative flex items-center justify-center">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={pieData}
-                      innerRadius={40}
-                      outerRadius={55}
-                      startAngle={90}
-                      endAngle={-270}
-                      dataKey="value"
-                    >
-                      <Cell fill="#06b6d4" />
-                      <Cell fill="#1e293b" />
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
-                {/* Center text */}
-                <div className="absolute text-center">
-                  <span className="text-3xl font-black">{attRate}%</span>
+              {attendanceLoading ? (
+                <div className="h-[150px] w-full flex items-center justify-center" aria-label="Loading attendance data">
+                  <Loader2 className="h-6 w-6 animate-spin text-cyan-400" />
                 </div>
-              </div>
-              <div className="text-[10px] text-slate-500 mt-2">
-                Present: {attendance?.summary?.present || 0} | Absent: {attendance?.summary?.absent || 0}
-              </div>
+              ) : (
+                <>
+                  <div className="h-[150px] w-full mt-2 relative flex items-center justify-center">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={pieData}
+                          innerRadius={40}
+                          outerRadius={55}
+                          startAngle={90}
+                          endAngle={-270}
+                          dataKey="value"
+                        >
+                          <Cell fill="#06b6d4" />
+                          <Cell fill="#1e293b" />
+                        </Pie>
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="absolute text-center">
+                      <span className="text-3xl font-black">{attRate}%</span>
+                    </div>
+                  </div>
+                  <div className="text-[10px] text-slate-500 mt-2">
+                    Present: {attendance?.summary?.present || 0} | Absent: {attendance?.summary?.absent || 0}
+                  </div>
+                </>
+              )}
             </div>
 
             {/* AI Insights Card */}
             <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-3xl space-y-4">
               <div className="flex items-center gap-1.5 border-b border-slate-800 pb-2">
-                <TrendingUp className="h-4.5 w-4.5 text-cyan-400" />
+                <TrendingUp className="h-4.5 w-4.5 text-cyan-400" aria-hidden="true" />
                 <h3 className="font-bold text-sm">AI Performance Trends</h3>
               </div>
-              {aiInsights ? (
+              {insightsLoading ? (
+                <div className="flex items-center gap-2 text-slate-400 text-xs" aria-label="Loading AI insights">
+                  <Loader2 className="h-4 w-4 animate-spin text-cyan-400" />
+                  <span>Generating insights...</span>
+                </div>
+              ) : aiInsights ? (
                 <div className="space-y-3.5 text-xs">
                   <div className="flex justify-between items-center">
                     <span className="text-slate-400">Risk Assessment:</span>
@@ -281,7 +402,7 @@ export default function StudentDashboard() {
                   </div>
                 </div>
               ) : (
-                <span className="text-[10px] text-slate-500 block italic">Generating insights...</span>
+                <span className="text-[10px] text-slate-500 block italic">No insights available.</span>
               )}
             </div>
           </div>
@@ -292,7 +413,7 @@ export default function StudentDashboard() {
             <div className="bg-slate-900 border-b border-slate-800 px-6 py-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="h-8 w-8 bg-cyan-950 border border-cyan-800 rounded-xl flex items-center justify-center text-cyan-400">
-                  <Sparkles className="h-4.5 w-4.5" />
+                  <Sparkles className="h-4.5 w-4.5" aria-hidden="true" />
                 </div>
                 <div>
                   <h3 className="font-bold text-sm">AI Academic Assistant</h3>
@@ -302,7 +423,7 @@ export default function StudentDashboard() {
             </div>
 
             {/* Messages body */}
-            <div className="flex-1 p-6 space-y-4 overflow-y-auto text-xs leading-relaxed modern-scrollbar bg-slate-950/30">
+            <div className="flex-1 p-6 space-y-4 overflow-y-auto text-xs leading-relaxed modern-scrollbar bg-slate-950/30" role="log" aria-label="Chat messages" aria-live="polite">
               {chatMessages.map((msg, idx) => (
                 <div 
                   key={idx} 
@@ -324,7 +445,7 @@ export default function StudentDashboard() {
               {aiLoading && (
                 <div className="flex justify-start">
                   <div className="bg-slate-900 border border-slate-850 p-3 rounded-2xl flex items-center gap-2 text-slate-400">
-                    <Loader2 className="h-4 w-4 animate-spin text-cyan-400" />
+                    <Loader2 className="h-4 w-4 animate-spin text-cyan-400" aria-hidden="true" />
                     <span>Analyzing academic parameters...</span>
                   </div>
                 </div>
@@ -338,14 +459,16 @@ export default function StudentDashboard() {
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
                 placeholder="Ask about deadlines, GPAs, or chemical formulas..."
+                aria-label="Ask the AI assistant a question"
                 className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs outline-none focus:border-cyan-500 text-slate-200"
               />
               <button 
                 type="submit"
                 disabled={aiLoading}
+                aria-label="Send message"
                 className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 px-4 rounded-xl flex items-center justify-center font-bold"
               >
-                <Send className="h-4.5 w-4.5" />
+                <Send className="h-4.5 w-4.5" aria-hidden="true" />
               </button>
             </form>
           </div>
@@ -360,24 +483,29 @@ export default function StudentDashboard() {
             <div className="flex justify-between items-center border-b border-slate-800 pb-3">
               <h2 className="text-lg font-bold">Term Grade Report</h2>
               <span className="text-xs text-slate-400 font-bold uppercase tracking-wider bg-slate-800 px-3 py-1 rounded-lg">
-                GPA: {reportCard?.summary?.gpa || '—'}
+                GPA: {reportCard?.summary?.gpa ?? '—'}
               </span>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-slate-800/80 text-slate-500">
-                    <th className="py-2.5 font-semibold">Subject Code</th>
-                    <th className="py-2.5 font-semibold">Subject Name</th>
-                    <th className="py-2.5 font-semibold">Score Obtained</th>
-                    <th className="py-2.5 font-semibold">Max</th>
-                    <th className="py-2.5 font-semibold">Grade</th>
-                    <th className="py-2.5 font-semibold">Grade Point</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/40">
-                  {reportCard?.grades?.map((g: any) => (
+            {reportCardLoading ? (
+              <div className="flex items-center justify-center py-12" aria-label="Loading grade data">
+                <Loader2 className="h-6 w-6 animate-spin text-cyan-400" />
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs text-left border-collapse" aria-label="Grade report table">
+                  <thead>
+                    <tr className="border-b border-slate-800/80 text-slate-500">
+                      <th className="py-2.5 font-semibold" scope="col">Subject Code</th>
+                      <th className="py-2.5 font-semibold" scope="col">Subject Name</th>
+                      <th className="py-2.5 font-semibold" scope="col">Score Obtained</th>
+                      <th className="py-2.5 font-semibold" scope="col">Max</th>
+                      <th className="py-2.5 font-semibold" scope="col">Grade</th>
+                      <th className="py-2.5 font-semibold" scope="col">Grade Point</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/40">
+                    {reportCard?.grades?.map((g: GradeData) => (
                     <tr key={g.id} className="hover:bg-slate-850/20">
                       <td className="py-3 font-mono">{g.subject_code}</td>
                       <td className="py-3 font-bold text-slate-200">{g.subject_name}</td>
@@ -401,12 +529,13 @@ export default function StudentDashboard() {
                 </tbody>
               </table>
             </div>
+          )}
           </div>
 
           {/* AI Report Card Summary evaluation */}
           <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-3xl space-y-4">
             <div className="flex items-center gap-1.5 border-b border-slate-800 pb-2">
-              <Sparkles className="h-4.5 w-4.5 text-cyan-400" />
+              <Sparkles className="h-4.5 w-4.5 text-cyan-400" aria-hidden="true" />
               <h3 className="font-bold text-sm">AI Progress Evaluator</h3>
             </div>
             <div className="prose prose-invert prose-xs text-xs text-slate-300 whitespace-pre-wrap leading-relaxed">
@@ -420,12 +549,17 @@ export default function StudentDashboard() {
       {activeTab === 'schedule' && (
         <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-3xl space-y-4">
           <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
-            <Calendar className="h-5 w-5 text-cyan-400" />
+            <Calendar className="h-5 w-5 text-cyan-400" aria-hidden="true" />
             <h2 className="text-lg font-bold">My Class Agenda Calendar</h2>
           </div>
 
+          {scheduleLoading ? (
+            <div className="flex items-center justify-center py-12" aria-label="Loading schedule">
+              <Loader2 className="h-6 w-6 animate-spin text-cyan-400" />
+            </div>
+          ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {schedule.map((slot) => (
+            {schedule.map((slot: ScheduleSlot) => (
               <div key={slot.id} className="p-4 bg-slate-950/40 border border-slate-800 rounded-2xl flex justify-between items-center">
                 <div className="space-y-1">
                   <span className="font-extrabold text-slate-200 text-sm block">{slot.subject_name}</span>
@@ -447,6 +581,7 @@ export default function StudentDashboard() {
               </div>
             )}
           </div>
+          )}
         </div>
       )}
 
@@ -457,8 +592,13 @@ export default function StudentDashboard() {
           <div className="lg:col-span-2 bg-slate-900/60 border border-slate-800 p-6 rounded-3xl space-y-4">
             <h2 className="text-lg font-bold border-b border-slate-800 pb-3">Course Homework & Labs</h2>
             
+            {assignmentsLoading ? (
+              <div className="flex items-center justify-center py-12" aria-label="Loading assignments">
+                <Loader2 className="h-6 w-6 animate-spin text-cyan-400" />
+              </div>
+            ) : (
             <div className="space-y-3.5">
-              {assignments.map((as) => {
+              {assignments.map((as: Assignment) => {
                 const sub = submissions.find(s => s.assignment_id === as.id);
                 return (
                   <div key={as.id} className="p-4 bg-slate-950/40 border border-slate-800 rounded-2xl flex flex-col sm:flex-row justify-between sm:items-center gap-4">
@@ -480,17 +620,18 @@ export default function StudentDashboard() {
                           {sub.status === 'Graded' ? `Score: ${sub.marks_obtained}/${sub.max_marks}` : '✓ Uploaded'}
                         </span>
                       ) : (
-                        <button
-                          onClick={() => {
-                            setSelectedAssign(as);
-                            setFileUrl('');
-                            setNotes('');
-                          }}
-                          className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1 transition"
-                        >
-                          <UploadCloud className="h-4 w-4" />
-                          <span>Submit Work</span>
-                        </button>
+                          <button
+                            onClick={() => {
+                              setSelectedAssign(as);
+                              setFileUrl('');
+                              setNotes('');
+                            }}
+                            aria-label={`Submit work for ${as.title}`}
+                            className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1 transition"
+                          >
+                            <UploadCloud className="h-4 w-4" aria-hidden="true" />
+                            <span>Submit Work</span>
+                          </button>
                       )}
                     </div>
                   </div>
@@ -502,6 +643,7 @@ export default function StudentDashboard() {
                 </div>
               )}
             </div>
+          )}
           </div>
 
           {/* Homework Submission Box form */}
@@ -509,28 +651,32 @@ export default function StudentDashboard() {
             <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-3xl space-y-4">
               <div className="flex justify-between items-center border-b border-slate-800 pb-3">
                 <h2 className="text-sm font-extrabold">Upload: {selectedAssign.title}</h2>
-                <button onClick={() => setSelectedAssign(null)} className="text-slate-500 text-xs hover:text-white">✕ Cancel</button>
+                <button onClick={() => setSelectedAssign(null)} aria-label="Cancel submission" className="text-slate-500 text-xs hover:text-white">✕ Cancel</button>
               </div>
 
               <form onSubmit={handleHomeworkSubmit} className="space-y-4 text-xs">
                 <div>
-                  <label className="text-slate-400 block mb-1">Simulated Cloud URL (PDF/DOC)</label>
+                  <label htmlFor="fileUrl" className="text-slate-400 block mb-1">Simulated Cloud URL (PDF/DOC)</label>
                   <input
+                    id="fileUrl"
                     type="url"
                     value={fileUrl}
                     onChange={(e) => setFileUrl(e.target.value)}
                     placeholder="https://drive.google.com/homework-report.pdf"
+                    aria-label="File URL for submission"
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 outline-none focus:border-cyan-500 text-slate-200 text-xs"
                   />
                   <span className="text-[10px] text-slate-500 block mt-1">Leaves default simulated link if left empty.</span>
                 </div>
 
                 <div>
-                  <label className="text-slate-400 block mb-1">Student notes to professor</label>
+                  <label htmlFor="notes" className="text-slate-400 block mb-1">Student notes to professor</label>
                   <textarea
+                    id="notes"
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     rows={3}
+                    aria-label="Submission notes"
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 outline-none focus:border-cyan-500 text-slate-200 text-xs"
                     placeholder="e.g. Worked with formulas on page 3..."
                   />
@@ -539,6 +685,7 @@ export default function StudentDashboard() {
                 <button
                   type="submit"
                   disabled={loading}
+                  aria-label="Upload submission"
                   className="w-full bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold py-2.5 rounded-xl transition text-xs shadow-md"
                 >
                   {loading ? 'Submitting...' : 'Upload Submission'}

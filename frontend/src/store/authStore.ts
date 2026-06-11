@@ -6,14 +6,72 @@ interface User {
   role: 'Admin' | 'Principal' | 'HOD' | 'Teacher' | 'Student' | 'Parent' | 'Accountant';
 }
 
+export interface StudentProfile {
+  id: string;
+  first_name: string;
+  last_name: string;
+  admission_number: string;
+  roll_number?: string;
+  class_id?: string;
+  section_id?: string;
+  class_name?: string;
+  section_name?: string;
+  dob?: string;
+  gender?: string;
+  address?: string;
+  status?: string;
+}
+
+export interface TeacherProfile {
+  id: string;
+  first_name: string;
+  last_name: string;
+  phone?: string;
+  department_id?: string;
+  department_name?: string;
+  qualification?: string;
+  status?: string;
+}
+
+export interface ParentProfile {
+  id: string;
+  first_name: string;
+  last_name: string;
+  phone?: string;
+  children?: Array<{ id: string; first_name: string; last_name: string; admission_number: string }>;
+}
+
+export interface UserProfile {
+  id?: string;
+  first_name?: string;
+  last_name?: string;
+  admission_number?: string;
+  roll_number?: string;
+  class_id?: string;
+  section_id?: string;
+  class_name?: string;
+  section_name?: string;
+  dob?: string;
+  gender?: string;
+  address?: string;
+  status?: string;
+  phone?: string;
+  department_id?: string;
+  department_name?: string;
+  qualification?: string;
+  occupation?: string;
+  children?: Array<{ id: string; first_name: string; last_name: string; admission_number: string }>;
+  role?: string;
+}
+
 interface AuthState {
   token: string | null;
   user: User | null;
-  profile: any | null;
+  profile: UserProfile | null;
   isAuthenticated: boolean;
-  login: (token: string, user: User, profile: any) => void;
+  login: (token: string, user: User, profile: UserProfile) => void;
   logout: () => void;
-  updateProfile: (profile: any) => void;
+  updateProfile: (profile: UserProfile) => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => {
@@ -23,7 +81,7 @@ export const useAuthStore = create<AuthState>((set) => {
   const savedProfile = localStorage.getItem('edusync_profile');
 
   let parsedUser: User | null = null;
-  let parsedProfile: any | null = null;
+  let parsedProfile: UserProfile | null = null;
 
   try {
     if (savedUser) parsedUser = JSON.parse(savedUser);

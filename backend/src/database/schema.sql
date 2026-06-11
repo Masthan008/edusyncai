@@ -240,7 +240,58 @@ CREATE TABLE IF NOT EXISTS notifications (
 
 -- Create basic indexes for performance queries
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_role_id ON users(role_id);
+CREATE INDEX IF NOT EXISTS idx_users_is_active ON users(is_active);
 CREATE INDEX IF NOT EXISTS idx_students_class_section ON students(class_id, section_id);
+CREATE INDEX IF NOT EXISTS idx_students_admission_number ON students(admission_number);
+CREATE INDEX IF NOT EXISTS idx_students_parent_id ON students(parent_id);
+CREATE INDEX IF NOT EXISTS idx_teachers_department_id ON teachers(department_id);
 CREATE INDEX IF NOT EXISTS idx_attendance_date ON attendance(date);
+CREATE INDEX IF NOT EXISTS idx_attendance_class_section ON attendance(class_id, section_id);
+CREATE INDEX IF NOT EXISTS idx_attendance_taken_by ON attendance(taken_by);
+CREATE INDEX IF NOT EXISTS idx_attendance_records_student ON attendance_records(student_id);
+CREATE INDEX IF NOT EXISTS idx_attendance_records_status ON attendance_records(status);
 CREATE INDEX IF NOT EXISTS idx_grades_student ON grades(student_id);
+CREATE INDEX IF NOT EXISTS idx_grades_exam ON grades(exam_id);
+CREATE INDEX IF NOT EXISTS idx_grades_subject ON grades(subject_id);
 CREATE INDEX IF NOT EXISTS idx_timetables_schedule ON timetables(class_id, section_id, day_of_week);
+CREATE INDEX IF NOT EXISTS idx_timetables_teacher ON timetables(teacher_id);
+CREATE INDEX IF NOT EXISTS idx_assignments_class_section ON assignments(class_id, section_id);
+CREATE INDEX IF NOT EXISTS idx_assignments_teacher ON assignments(teacher_id);
+CREATE INDEX IF NOT EXISTS idx_assignment_submissions_assignment ON assignment_submissions(assignment_id);
+CREATE INDEX IF NOT EXISTS idx_assignment_submissions_student ON assignment_submissions(student_id);
+CREATE INDEX IF NOT EXISTS idx_payments_student ON payments(student_id);
+CREATE INDEX IF NOT EXISTS idx_payments_fee_structure ON payments(fee_structure_id);
+CREATE INDEX IF NOT EXISTS idx_payments_date ON payments(payment_date);
+CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(is_read);
+CREATE INDEX IF NOT EXISTS idx_exams_class ON exams(class_id);
+CREATE INDEX IF NOT EXISTS idx_exams_academic_year ON exams(academic_year_id);
+
+-- Add CHECK constraints for data integrity
+ALTER TABLE attendance_records ADD CONSTRAINT IF NOT EXISTS chk_attendance_status 
+  CHECK (status IN ('Present', 'Absent', 'Late', 'Excused'));
+ALTER TABLE students ADD CONSTRAINT IF NOT EXISTS chk_student_status 
+  CHECK (status IN ('Active', 'Suspended', 'Graduated', 'Transferred'));
+ALTER TABLE teachers ADD CONSTRAINT IF NOT EXISTS chk_teacher_status 
+  CHECK (status IN ('Active', 'Inactive', 'OnLeave'));
+ALTER TABLE payments ADD CONSTRAINT IF NOT EXISTS chk_payment_status 
+  CHECK (status IN ('Paid', 'Pending', 'Failed'));
+ALTER TABLE notifications ADD CONSTRAINT IF NOT EXISTS chk_notification_type 
+  CHECK (type IN ('info', 'success', 'warning', 'danger'));
+
+-- Add trigger function for updated_at
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+-- Apply updated_at trigger to users table
+DROP TRIGGER IF EXISTS trg_users_updated_at ON users;
+CREATE TRIGGER trg_users_updated_at
+    BEFORE UPDATE ON users
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();

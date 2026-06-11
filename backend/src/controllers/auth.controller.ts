@@ -9,12 +9,16 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
   const { email, password } = req.body;
 
   try {
+    if (!email || !password) {
+      return res.status(400).json({ success: false, message: 'Email and password are required.' });
+    }
+
     // Check user & join role
     const userRes = await query(
       `SELECT u.*, r.name as role_name 
        FROM users u 
        JOIN roles r ON u.role_id = r.id 
-       WHERE u.email = $1`,
+       WHERE LOWER(u.email) = LOWER($1)`,
       [email]
     );
 
@@ -28,8 +32,8 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
       return res.status(403).json({ success: false, message: 'Your account has been deactivated.' });
     }
 
-    // Compare passwords
-    const isPasswordValid = bcrypt.compareSync(password, user.password_hash);
+    // Compare passwords (async)
+    const isPasswordValid = await bcrypt.compare(password, user.password_hash);
     if (!isPasswordValid) {
       return res.status(401).json({ success: false, message: 'Invalid email or password.' });
     }
@@ -173,7 +177,7 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
     const roleId = roleRes.rows[0].id;
 
     // 3. Hash password
-    const passwordHash = bcrypt.hashSync(password, 10);
+    const passwordHash = await bcrypt.hash(password, 10);
 
     // 4. Create User
     const userInsert = await query(
@@ -192,7 +196,7 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
       const admissionNum = `ADM-${Date.now().toString().slice(-6)}`;
       await query(
         'INSERT INTO students (id, first_name, last_name, admission_number, dob) VALUES ($1, $2, $3, $4, $5)',
-        [userId, first_name, last_name, admissionNum, '2000-01-01']
+        [userId, first_name, last_name, admissionNum, new Date().toISOString().split('T')[0]]
       );
     } else if (role === 'Parent') {
       await query(

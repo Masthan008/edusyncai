@@ -117,7 +117,7 @@ export const admitStudent = async (req: Request, res: Response, next: NextFuncti
     }
 
     // 4. Create User
-    const passwordHash = bcrypt.hashSync(password, 10);
+    const passwordHash = await bcrypt.hash(password, 10);
     const userInsert = await query(
       'INSERT INTO users (email, password_hash, role_id) VALUES ($1, $2, $3) RETURNING id',
       [email, passwordHash, studentRoleId]

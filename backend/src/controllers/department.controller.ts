@@ -10,32 +10,27 @@ export const getDepartments = async (req: Request, res: Response, next: NextFunc
       ORDER BY d.name ASC
     `;
     const deptsRes = await query(deptSql);
-    const depts = deptsRes.rows;
 
-    // Fetch faculty count and student count for each department dynamically
-    for (const d of depts) {
-      const facultyCountRes = await query(
-        'SELECT COUNT(*)::int as count FROM teachers WHERE department_id = $1',
-        [d.id]
-      );
-      d.faculty_count = facultyCountRes.rows[0]?.count || 0;
+    // Fetch aggregated counts for all departments at once
+    const aggRes = await query(`
+      SELECT
+        d.id,
+        COALESCE(tc.cnt, 0)::int as faculty_count,
+        COALESCE(sc.cnt, 0)::int as student_count,
+        COALESCE(sbc.cnt, 0)::int as subjects_count
+      FROM departments d
+      LEFT JOIN (SELECT department_id, COUNT(*)::int as cnt FROM teachers GROUP BY department_id) tc ON tc.department_id = d.id
+      LEFT JOIN (SELECT c.department_id, COUNT(s.id)::int as cnt FROM students s JOIN classes c ON s.class_id = c.id GROUP BY c.department_id) sc ON sc.department_id = d.id
+      LEFT JOIN (SELECT department_id, COUNT(*)::int as cnt FROM subjects GROUP BY department_id) sbc ON sbc.department_id = d.id
+    `);
+    const aggMap = new Map(aggRes.rows.map((r: any) => [r.id, r]));
 
-      const studentCountRes = await query(
-        `SELECT COUNT(s.id)::int as count 
-         FROM students s
-         JOIN classes c ON s.class_id = c.id
-         WHERE c.department_id = $1`,
-        [d.id]
-      );
-      d.student_count = studentCountRes.rows[0]?.count || 0;
-
-      // Fetch subject count
-      const subjectCountRes = await query(
-        'SELECT COUNT(*)::int as count FROM subjects WHERE department_id = $1',
-        [d.id]
-      );
-      d.subjects_count = subjectCountRes.rows[0]?.count || 0;
-    }
+    const depts = deptsRes.rows.map((d: any) => ({
+      ...d,
+      faculty_count: aggMap.get(d.id)?.faculty_count || 0,
+      student_count: aggMap.get(d.id)?.student_count || 0,
+      subjects_count: aggMap.get(d.id)?.subjects_count || 0,
+    }));
 
     return res.status(200).json({
       success: true,
@@ -49,15 +44,20 @@ export const getDepartments = async (req: Request, res: Response, next: NextFunc
 export const createDepartment = async (req: Request, res: Response, next: NextFunction) => {
   const { name, code, hod_id } = req.body;
 
+  if (!code || typeof code !== 'string') {
+    return res.status(400).json({ success: false, message: 'Department code is required.' });
+  }
+
   try {
-    const codeCheck = await query('SELECT id FROM departments WHERE code = $1', [code.toUpperCase()]);
+    const codeUpper = code.toUpperCase();
+    const codeCheck = await query('SELECT id FROM departments WHERE code = $1', [codeUpper]);
     if (codeCheck.rowCount > 0) {
       return res.status(400).json({ success: false, message: 'Department code already exists.' });
     }
 
     const resDept = await query(
       'INSERT INTO departments (name, code, hod_id) VALUES ($1, $2, $3) RETURNING *',
-      [name, code.toUpperCase(), hod_id || null]
+      [name, codeUpper, hod_id || null]
     );
 
     return res.status(201).json({

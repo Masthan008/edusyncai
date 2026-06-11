@@ -3,6 +3,7 @@ import { query } from '../database/db.js';
 
 // Helper for letter grade and grade point conversion
 const calculateLetterGrade = (marks: number, max: number) => {
+  if (max <= 0) throw new Error('max_marks must be greater than 0');
   const pct = (marks / max) * 100;
   if (pct >= 90) return { letter: 'A+', point: 4.0 };
   if (pct >= 80) return { letter: 'A', point: 3.7 };
@@ -133,7 +134,8 @@ export const getReportCard = async (req: Request, res: Response, next: NextFunct
     grades.forEach((g: any) => {
       const credits = g.credits || 3;
       totalCredits += credits;
-      weightedPoints += parseFloat(g.grade_point) * credits;
+      const gradePoint = parseFloat(g.grade_point);
+      weightedPoints += (isNaN(gradePoint) ? 0 : gradePoint) * credits;
     });
 
     const gpa = totalCredits > 0 ? weightedPoints / totalCredits : 0.0;

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { api } from '../../../utils/api.js';
 import { useAuthStore } from '../../../store/authStore.js';
 import { 
@@ -6,19 +6,91 @@ import {
   Search, CalendarDays, FileText, ChevronRight, AlertCircle, Sparkles
 } from 'lucide-react';
 
+interface ClassInfo {
+  id: string;
+  name: string;
+}
+
+interface SectionInfo {
+  id: string;
+  class_id: string;
+  name: string;
+}
+
+interface SubjectInfo {
+  id: string;
+  name: string;
+  code: string;
+}
+
+interface Student {
+  id: string;
+  roll_number: string;
+  first_name: string;
+  last_name: string;
+}
+
+interface ExamInfo {
+  id: string;
+  name: string;
+}
+
+interface Assignment {
+  id: string;
+  title: string;
+  subject_id: string;
+  class_id: string;
+  section_id: string;
+  due_date: string;
+  max_marks: number;
+}
+
+interface Submission {
+  id: string;
+  student_name: string;
+  submission_date: string;
+  file_url: string | null;
+  status: string;
+  marks_obtained: number | null;
+  max_marks: number;
+  teacher_remarks: string | null;
+}
+
+interface ScheduleSlot {
+  id: string;
+  subject_name: string;
+  subject_code: string;
+  class_name: string;
+  section_name: string;
+  room: string;
+  day_of_week: number;
+  start_time: string;
+  end_time: string;
+}
+
+interface AttendanceRecord {
+  status: 'Present' | 'Absent' | 'Late' | 'Excused';
+  remarks: string;
+}
+
+interface GradeRecord {
+  marks: number;
+  remarks: string;
+}
+
 export default function TeacherDashboard() {
   const [activeTab, setActiveTab] = useState<'attendance' | 'grades' | 'assignments' | 'schedule'>('attendance');
   const { profile } = useAuthStore();
 
   // Lists from DB
-  const [classes, setClasses] = useState<any[]>([]);
-  const [sections, setSections] = useState<any[]>([]);
-  const [subjects, setSubjects] = useState<any[]>([]);
-  const [students, setStudents] = useState<any[]>([]);
-  const [exams, setExams] = useState<any[]>([]);
-  const [assignments, setAssignments] = useState<any[]>([]);
-  const [submissions, setSubmissions] = useState<any[]>([]);
-  const [schedule, setSchedule] = useState<any[]>([]);
+  const [classes, setClasses] = useState<ClassInfo[]>([]);
+  const [sections, setSections] = useState<SectionInfo[]>([]);
+  const [subjects, setSubjects] = useState<SubjectInfo[]>([]);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [exams, setExams] = useState<ExamInfo[]>([]);
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [schedule, setSchedule] = useState<ScheduleSlot[]>([]);
 
   // Selection states
   const [selectedClass, setSelectedClass] = useState('');
@@ -29,8 +101,8 @@ export default function TeacherDashboard() {
 
   // Roster inputs
   const [attendanceDate, setAttendanceDate] = useState(new Date().toISOString().split('T')[0]);
-  const [attendanceRecords, setAttendanceRecords] = useState<Record<string, { status: 'Present' | 'Absent' | 'Late' | 'Excused'; remarks: string }>>({});
-  const [gradesRecords, setGradesRecords] = useState<Record<string, { marks: number; remarks: string }>>({});
+  const [attendanceRecords, setAttendanceRecords] = useState<Record<string, AttendanceRecord>>({});
+  const [gradesRecords, setGradesRecords] = useState<Record<string, GradeRecord>>({});
 
   // Assignment publish form
   const [assignForm, setAssignForm] = useState({
@@ -38,7 +110,7 @@ export default function TeacherDashboard() {
   });
 
   // Grading form modal / helper
-  const [activeSubmission, setActiveSubmission] = useState<any>(null);
+  const [activeSubmission, setActiveSubmission] = useState<Submission | null>(null);
   const [gradingInput, setGradingInput] = useState({ marks: '', remarks: '' });
 
   // Status Alerts
@@ -46,18 +118,31 @@ export default function TeacherDashboard() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const tabs = useMemo(() => [
+    { id: 'attendance' as const, label: 'Attendance', icon: <CheckSquare className="h-4 w-4" /> },
+    { id: 'grades' as const, label: 'Grades book', icon: <Award className="h-4 w-4" /> },
+    { id: 'assignments' as const, label: 'Assignments', icon: <BookOpen className="h-4 w-4" /> },
+    { id: 'schedule' as const, label: 'Schedule', icon: <Clock className="h-4 w-4" /> },
+  ], []);
+
+  const dayNames = useMemo(() => ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'], []);
+
   useEffect(() => {
+    const ac = new AbortController();
     fetchTeacherSchedule();
     fetchSchoolData();
     fetchExams();
     fetchAssignments();
+    return () => ac.abort();
   }, []);
 
   // Fetch student lists when class/section matches
   useEffect(() => {
+    const ac = new AbortController();
     if (selectedClass && selectedSection) {
       fetchStudents(selectedClass, selectedSection);
     }
+    return () => ac.abort();
   }, [selectedClass, selectedSection]);
 
   const fetchTeacherSchedule = async () => {
@@ -65,8 +150,8 @@ export default function TeacherDashboard() {
     try {
       const res = await api.get(`/timetables/teacher/${profile.id}`);
       setSchedule(res.data.data);
-    } catch (e) {
-      console.error(e);
+    } catch {
+      setErrorMsg('Failed to load your timetable schedule.');
     }
   };
 
@@ -78,8 +163,8 @@ export default function TeacherDashboard() {
       setClasses(cls.data.data);
       setSections(sec.data.data);
       setSubjects(sub.data.data);
-    } catch (e) {
-      console.error(e);
+    } catch {
+      setErrorMsg('Failed to load school data (classes, sections, subjects).');
     }
   };
 
@@ -87,8 +172,8 @@ export default function TeacherDashboard() {
     try {
       const res = await api.get('/exams');
       setExams(res.data.data);
-    } catch (e) {
-      console.error(e);
+    } catch {
+      setErrorMsg('Failed to load exams list.');
     }
   };
 
@@ -96,8 +181,8 @@ export default function TeacherDashboard() {
     try {
       const res = await api.get('/assignments');
       setAssignments(res.data.data);
-    } catch (e) {
-      console.error(e);
+    } catch {
+      setErrorMsg('Failed to load assignments.');
     }
   };
 
@@ -106,17 +191,16 @@ export default function TeacherDashboard() {
       const res = await api.get(`/students?classId=${classId}&sectionId=${sectionId}`);
       setStudents(res.data.data);
       
-      // Initialize empty logs maps
-      const attInit: typeof attendanceRecords = {};
-      const gradeInit: typeof gradesRecords = {};
-      res.data.data.forEach((std: any) => {
+      const attInit: Record<string, AttendanceRecord> = {};
+      const gradeInit: Record<string, GradeRecord> = {};
+      (res.data.data as Student[]).forEach((std) => {
         attInit[std.id] = { status: 'Present', remarks: '' };
         gradeInit[std.id] = { marks: 80, remarks: '' };
       });
       setAttendanceRecords(attInit);
       setGradesRecords(gradeInit);
-    } catch (e) {
-      console.error(e);
+    } catch {
+      setErrorMsg('Failed to load student roster.');
     }
   };
 
@@ -124,13 +208,13 @@ export default function TeacherDashboard() {
     try {
       const res = await api.get(`/assignments/submissions?assignmentId=${assignId}`);
       setSubmissions(res.data.data);
-    } catch (e) {
-      console.error(e);
+    } catch {
+      setErrorMsg('Failed to load submissions for this assignment.');
     }
   };
 
   // Submit attendance records
-  const handleAttendanceSubmit = async (e: React.FormEvent) => {
+  const handleAttendanceSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedClass || !selectedSection) return;
     
@@ -153,15 +237,16 @@ export default function TeacherDashboard() {
         records
       });
       setSuccessMsg('Attendance sheet logged successfully.');
-    } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Failed to submit attendance.');
+    } catch (err: unknown) {
+      const apiErr = err as { response?: { data?: { message?: string } } };
+      setErrorMsg(apiErr.response?.data?.message || 'Failed to submit attendance.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedClass, selectedSection, attendanceRecords, selectedSubject, attendanceDate]);
 
   // Submit Gradebook
-  const handleGradesSubmit = async (e: React.FormEvent) => {
+  const handleGradesSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedExam || !selectedSubject) return;
 
@@ -170,30 +255,31 @@ export default function TeacherDashboard() {
     setSuccessMsg(null);
 
     try {
-      // Record grade for each student synchronously
-      for (const stdId of Object.keys(gradesRecords)) {
-        await api.post('/exams/grade', {
+      const gradePromises = Object.keys(gradesRecords).map(stdId =>
+        api.post('/exams/grade', {
           exam_id: selectedExam,
           student_id: stdId,
           subject_id: selectedSubject,
           marks_obtained: gradesRecords[stdId].marks,
-          max_marks: 100, // standard conversion
+          max_marks: 100,
           remarks: gradesRecords[stdId].remarks
-        });
-      }
+        })
+      );
+      await Promise.all(gradePromises);
       setSuccessMsg('Exam grades recorded successfully.');
-    } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Failed to record grades.');
+    } catch (err: unknown) {
+      const apiErr = err as { response?: { data?: { message?: string } } };
+      setErrorMsg(apiErr.response?.data?.message || 'Failed to record grades.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedExam, selectedSubject, gradesRecords]);
 
   // Publish Homework Assignment
-  const handlePublishAssignment = async (e: React.FormEvent) => {
+  const handlePublishAssignment = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedClass || !selectedSection || !selectedSubject) {
-      alert('Please select Class, Section, and Subject in selections top-bar first.');
+      setErrorMsg('Please select Class, Section, and Subject in selections top-bar first.');
       return;
     }
 
@@ -214,15 +300,16 @@ export default function TeacherDashboard() {
       setSuccessMsg('Homework assignment published successfully.');
       fetchAssignments();
       setAssignForm({ title: '', description: '', due_date: '', max_marks: '' });
-    } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Failed to publish assignment.');
+    } catch (err: unknown) {
+      const apiErr = err as { response?: { data?: { message?: string } } };
+      setErrorMsg(apiErr.response?.data?.message || 'Failed to publish assignment.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedClass, selectedSection, selectedSubject, assignForm]);
 
   // Grade Homework Submission
-  const handleGradeSubmission = async (e: React.FormEvent) => {
+  const handleGradeSubmission = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeSubmission) return;
 
@@ -239,12 +326,13 @@ export default function TeacherDashboard() {
       fetchSubmissions(selectedAssignment);
       setActiveSubmission(null);
       setGradingInput({ marks: '', remarks: '' });
-    } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Failed to grade submission.');
+    } catch (err: unknown) {
+      const apiErr = err as { response?: { data?: { message?: string } } };
+      setErrorMsg(apiErr.response?.data?.message || 'Failed to grade submission.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeSubmission, gradingInput, selectedAssignment]);
 
   return (
     <div className="space-y-6 text-slate-100">
@@ -256,17 +344,15 @@ export default function TeacherDashboard() {
         </div>
 
         {/* Tab Selector */}
-        <div className="flex gap-1 bg-slate-900 border border-slate-800 p-1.5 rounded-2xl">
-          {[
-            { id: 'attendance', label: 'Attendance', icon: <CheckSquare className="h-4 w-4" /> },
-            { id: 'grades', label: 'Grades book', icon: <Award className="h-4 w-4" /> },
-            { id: 'assignments', label: 'Assignments', icon: <BookOpen className="h-4 w-4" /> },
-            { id: 'schedule', label: 'Schedule', icon: <Clock className="h-4 w-4" /> },
-          ].map((tab) => (
+        <div className="flex gap-1 bg-slate-900 border border-slate-800 p-1.5 rounded-2xl" role="tablist" aria-label="Dashboard sections">
+          {tabs.map((tab) => (
             <button
               key={tab.id}
+              role="tab"
+              aria-selected={activeTab === tab.id}
+              aria-label={`${tab.label} section`}
               onClick={() => {
-                setActiveTab(tab.id as any);
+                setActiveTab(tab.id);
                 setErrorMsg(null);
                 setSuccessMsg(null);
               }}
@@ -287,6 +373,7 @@ export default function TeacherDashboard() {
           <div className="space-y-1">
             <span className="text-slate-500 block uppercase tracking-wider text-[10px]">Select Class</span>
             <select
+              aria-label="Select class"
               value={selectedClass}
               onChange={(e) => {
                 setSelectedClass(e.target.value);
@@ -302,6 +389,7 @@ export default function TeacherDashboard() {
           <div className="space-y-1">
             <span className="text-slate-500 block uppercase tracking-wider text-[10px]">Select Section</span>
             <select
+              aria-label="Select section"
               value={selectedSection}
               onChange={(e) => setSelectedSection(e.target.value)}
               className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 outline-none"
@@ -316,6 +404,7 @@ export default function TeacherDashboard() {
           <div className="space-y-1">
             <span className="text-slate-500 block uppercase tracking-wider text-[10px]">Subject (optional/required)</span>
             <select
+              aria-label="Select subject"
               value={selectedSubject}
               onChange={(e) => setSelectedSubject(e.target.value)}
               className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 outline-none"
@@ -361,6 +450,7 @@ export default function TeacherDashboard() {
             <div className="flex items-center gap-2 text-xs">
               <span className="text-slate-400">Date:</span>
               <input
+                aria-label="Attendance date"
                 type="date"
                 value={attendanceDate}
                 onChange={(e) => setAttendanceDate(e.target.value)}
@@ -389,11 +479,14 @@ export default function TeacherDashboard() {
                           <td className="py-3 font-mono">{std.roll_number || 'N/A'}</td>
                           <td className="py-3 font-bold text-slate-200">{std.first_name} {std.last_name}</td>
                           <td className="py-3 text-center">
-                            <div className="inline-flex bg-slate-950 p-1 rounded-xl border border-slate-850">
+                              <div className="inline-flex bg-slate-950 p-1 rounded-xl border border-slate-850" role="radiogroup" aria-label={`Attendance status for ${std.first_name} ${std.last_name}`}>
                               {(['Present', 'Absent', 'Late', 'Excused'] as const).map((st) => (
                                 <button
                                   key={st}
                                   type="button"
+                                  role="radio"
+                                  aria-checked={record.status === st}
+                                  aria-label={`Mark ${std.first_name} ${std.last_name} as ${st}`}
                                   onClick={() => setAttendanceRecords({
                                     ...attendanceRecords,
                                     [std.id]: { ...record, status: st }
@@ -413,6 +506,7 @@ export default function TeacherDashboard() {
                           </td>
                           <td className="py-3">
                             <input
+                              aria-label={`Remarks for ${std.first_name} ${std.last_name}`}
                               type="text"
                               placeholder="e.g. sick leave"
                               value={record.remarks}
@@ -433,6 +527,7 @@ export default function TeacherDashboard() {
               <div className="flex justify-end pt-4 border-t border-slate-800/60">
                 <button
                   type="submit"
+                  aria-label="Submit attendance sheet"
                   disabled={loading}
                   className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-6 py-2.5 rounded-xl transition text-xs shadow-md flex items-center gap-1.5"
                 >
@@ -457,6 +552,7 @@ export default function TeacherDashboard() {
             <div className="flex items-center gap-2 text-xs">
               <span className="text-slate-400">Exam Code:</span>
               <select
+                aria-label="Select exam"
                 value={selectedExam}
                 onChange={(e) => setSelectedExam(e.target.value)}
                 className="bg-slate-950 border border-slate-800 rounded-xl p-1.5 outline-none text-xs text-slate-200"
@@ -488,6 +584,7 @@ export default function TeacherDashboard() {
                           <td className="py-3 font-bold text-slate-200">{std.first_name} {std.last_name}</td>
                           <td className="py-3">
                             <input
+                              aria-label={`Marks for ${std.first_name} ${std.last_name}`}
                               type="number"
                               min={0} max={100}
                               value={grade.marks}
@@ -500,6 +597,7 @@ export default function TeacherDashboard() {
                           </td>
                           <td className="py-3">
                             <input
+                              aria-label={`Grade remarks for ${std.first_name} ${std.last_name}`}
                               type="text"
                               placeholder="e.g. Excellent chemistry concepts"
                               value={grade.remarks}
@@ -520,6 +618,7 @@ export default function TeacherDashboard() {
               <div className="flex justify-end pt-4 border-t border-slate-800/60">
                 <button
                   type="submit"
+                  aria-label="Save gradebook records"
                   disabled={loading}
                   className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-6 py-2.5 rounded-xl transition text-xs shadow-md flex items-center gap-1.5"
                 >
@@ -548,8 +647,9 @@ export default function TeacherDashboard() {
 
             <form onSubmit={handlePublishAssignment} className="space-y-3.5 text-xs">
               <div>
-                <label className="text-slate-400 font-semibold block mb-1">Assignment Title</label>
+                <label className="text-slate-400 font-semibold block mb-1" id="title-label">Assignment Title</label>
                 <input
+                  aria-labelledby="title-label"
                   type="text" required
                   value={assignForm.title}
                   onChange={(e) => setAssignForm({ ...assignForm, title: e.target.value })}
@@ -559,8 +659,9 @@ export default function TeacherDashboard() {
               </div>
 
               <div>
-                <label className="text-slate-400 font-semibold block mb-1">Description / Instructions</label>
+                <label className="text-slate-400 font-semibold block mb-1" id="desc-label">Description / Instructions</label>
                 <textarea
+                  aria-labelledby="desc-label"
                   value={assignForm.description}
                   onChange={(e) => setAssignForm({ ...assignForm, description: e.target.value })}
                   rows={3}
@@ -571,8 +672,9 @@ export default function TeacherDashboard() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-slate-400 font-semibold block mb-1">Due Date & Time</label>
+                  <label className="text-slate-400 font-semibold block mb-1" id="due-label">Due Date & Time</label>
                   <input
+                    aria-labelledby="due-label"
                     type="datetime-local" required
                     value={assignForm.due_date}
                     onChange={(e) => setAssignForm({ ...assignForm, due_date: e.target.value })}
@@ -580,8 +682,9 @@ export default function TeacherDashboard() {
                   />
                 </div>
                 <div>
-                  <label className="text-slate-400 font-semibold block mb-1">Max Marks</label>
+                  <label className="text-slate-400 font-semibold block mb-1" id="marks-label">Max Marks</label>
                   <input
+                    aria-labelledby="marks-label"
                     type="number" required
                     value={assignForm.max_marks}
                     onChange={(e) => setAssignForm({ ...assignForm, max_marks: e.target.value })}
@@ -593,6 +696,7 @@ export default function TeacherDashboard() {
 
               <button
                 type="submit"
+                aria-label="Publish homework assignment"
                 disabled={loading}
                 className="w-full bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold py-2.5 rounded-xl transition text-xs shadow-md"
               >
@@ -606,6 +710,7 @@ export default function TeacherDashboard() {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-800 pb-3">
               <h2 className="text-lg font-bold">Homework submissions tracker</h2>
               <select
+                aria-label="Select assignment"
                 value={selectedAssignment}
                 onChange={(e) => {
                   setSelectedAssignment(e.target.value);
@@ -637,11 +742,16 @@ export default function TeacherDashboard() {
                         <tr key={sub.id} className="hover:bg-slate-850/20">
                           <td className="py-3 font-bold text-slate-200">{sub.student_name}</td>
                           <td className="py-3 font-mono">{sub.submission_date.split('T')[0]}</td>
-                          <td className="py-3 text-cyan-400 hover:underline">
+                          <td className="py-3">
                             {sub.file_url ? (
-                              <a href="#" onClick={(e) => { e.preventDefault(); alert(`Downloading simulated submission file: ${sub.file_url}`); }}>
+                              <button
+                                type="button"
+                                aria-label={`Download submission file for ${sub.student_name}`}
+                                onClick={() => setSuccessMsg(`Downloading simulated submission file: ${sub.file_url}`)}
+                                className="text-cyan-400 hover:underline text-xs"
+                              >
                                 View Report.pdf
-                              </a>
+                              </button>
                             ) : 'No file'}
                           </td>
                           <td className="py-3">
@@ -656,6 +766,7 @@ export default function TeacherDashboard() {
                           </td>
                           <td className="py-3 text-right">
                             <button
+                              aria-label={`Review submission from ${sub.student_name}`}
                               onClick={() => {
                                 setActiveSubmission(sub);
                                 setGradingInput({ marks: String(sub.marks_obtained || ''), remarks: sub.teacher_remarks || '' });
@@ -682,12 +793,13 @@ export default function TeacherDashboard() {
                   <div className="p-4 bg-slate-950/40 border border-slate-800 rounded-2xl space-y-3">
                     <div className="flex justify-between items-center pb-2 border-b border-slate-850">
                       <span className="font-extrabold text-xs">Review: {activeSubmission.student_name}</span>
-                      <button onClick={() => setActiveSubmission(null)} className="text-slate-500 hover:text-white">✕ Close</button>
+                      <button aria-label="Close review panel" onClick={() => setActiveSubmission(null)} className="text-slate-500 hover:text-white">✕ Close</button>
                     </div>
                     <form onSubmit={handleGradeSubmission} className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
                       <div className="text-xs">
-                        <label className="text-slate-500 block mb-1">Score Obtained (max: {activeSubmission.max_marks})</label>
+                        <label className="text-slate-500 block mb-1" id="score-label">Score Obtained (max: {activeSubmission.max_marks})</label>
                         <input
+                          aria-labelledby="score-label"
                           type="number" required
                           value={gradingInput.marks}
                           onChange={(e) => setGradingInput({ ...gradingInput, marks: e.target.value })}
@@ -696,8 +808,9 @@ export default function TeacherDashboard() {
                         />
                       </div>
                       <div className="text-xs">
-                        <label className="text-slate-500 block mb-1">Teacher Feedback remarks</label>
+                        <label className="text-slate-500 block mb-1" id="remarks-label">Teacher Feedback remarks</label>
                         <input
+                          aria-labelledby="remarks-label"
                           type="text"
                           value={gradingInput.remarks}
                           onChange={(e) => setGradingInput({ ...gradingInput, remarks: e.target.value })}
@@ -707,6 +820,7 @@ export default function TeacherDashboard() {
                       </div>
                       <button
                         type="submit"
+                        aria-label="Save score for this submission"
                         className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold py-2 rounded-xl text-xs flex justify-center items-center gap-1"
                       >
                         <Check className="h-4 w-4" /> Save Score
@@ -734,7 +848,11 @@ export default function TeacherDashboard() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {schedule.map((slot) => (
-              <div key={slot.id} className="p-4 bg-slate-950/40 border border-slate-800 rounded-2xl flex justify-between items-center">
+              <div
+                key={slot.id}
+                aria-label={`${slot.subject_name} on ${dayNames[slot.day_of_week - 1]} at ${slot.start_time.slice(0,5)}`}
+                className="p-4 bg-slate-950/40 border border-slate-800 rounded-2xl flex justify-between items-center"
+              >
                 <div className="space-y-1">
                   <span className="font-extrabold text-slate-200 text-sm block">{slot.subject_name} ({slot.subject_code})</span>
                   <span className="text-xs text-slate-400 block">Class: <span className="font-bold text-slate-300">{slot.class_name} - {slot.section_name}</span></span>
@@ -743,7 +861,7 @@ export default function TeacherDashboard() {
 
                 <div className="text-right space-y-1">
                   <span className="text-xs font-bold text-cyan-400 bg-cyan-950 border border-cyan-800 px-2.5 py-0.5 rounded-full inline-block">
-                    {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'][slot.day_of_week - 1]}
+                    {dayNames[slot.day_of_week - 1]}
                   </span>
                   <span className="text-[10px] text-slate-500 font-mono block mt-1">{slot.start_time.slice(0,5)} - {slot.end_time.slice(0,5)}</span>
                 </div>

@@ -3,7 +3,11 @@ import { query } from '../database/db.js';
 
 export const submitAttendance = async (req: Request, res: Response, next: NextFunction) => {
   const { date, class_id, section_id, subject_id, records } = req.body;
-  const teacherId = (req as any).user?.id; // authenticated user (teacher/admin)
+  const teacherId = (req as any).user?.id;
+
+  if (!Array.isArray(records)) {
+    return res.status(400).json({ success: false, message: 'records must be an array.' });
+  }
 
   try {
     // 1. Create or fetch attendance session
@@ -29,12 +33,18 @@ export const submitAttendance = async (req: Request, res: Response, next: NextFu
       attendanceId = newSession.rows[0].id;
     }
 
-    // 2. Insert new records
-    for (const rec of records) {
+    // 2. Insert new records (batched for performance)
+    if (records.length > 0) {
+      const valuePlaceholders = records.map((_: any, i: number) =>
+        `($1, $${i * 3 + 2}, $${i * 3 + 3}, $${i * 3 + 4})`
+      ).join(', ');
+      const flatParams = [attendanceId];
+      for (const rec of records) {
+        flatParams.push(rec.student_id, rec.status, rec.remarks || null);
+      }
       await query(
-        `INSERT INTO attendance_records (attendance_id, student_id, status, remarks) 
-         VALUES ($1, $2, $3, $4)`,
-        [attendanceId, rec.student_id, rec.status, rec.remarks || null]
+        `INSERT INTO attendance_records (attendance_id, student_id, status, remarks) VALUES ${valuePlaceholders}`,
+        flatParams
       );
     }
 

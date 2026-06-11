@@ -1,354 +1,574 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { api } from '../../../utils/api.js';
-import { 
+import {
   Users, BookOpen, Landmark, Building, Calendar, ArrowRight,
-  TrendingUp, Activity, Plus, Search, Filter, AlertCircle, Trash2, 
+  TrendingUp, Activity, Plus, Search, Filter, AlertCircle, Trash2,
   CalendarDays, ShieldCheck, CheckCircle2, CreditCard, Clock, Award, BookCopy
 } from 'lucide-react';
-import { 
-  ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, 
+import {
+  ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip,
   PieChart, Pie, Cell, BarChart, Bar, Legend
 } from 'recharts';
 import { useAuthStore } from '../../../store/authStore.js';
 
-export default function AdminDashboard() {
+interface Overview {
+  counters?: {
+    students?: number;
+    teachers?: number;
+    departments?: number;
+    totalRevenue?: number;
+  };
+  revenueTrends?: { name: string; value: number }[];
+  attendanceStats?: { name: string; value: number }[];
+  recentActivities?: ActivityItem[];
+}
+
+interface ActivityItem {
+  id: string;
+  type: string;
+  text: string;
+  time: string;
+}
+
+interface Student {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  admission_number: string;
+  roll_number: string;
+  class_id: string;
+  section_id: string;
+  class_name: string;
+  section_name: string;
+  parent_name?: string;
+  parent_phone?: string;
+  parent_email?: string;
+  status: string;
+  dob: string;
+  gender: string;
+  address: string;
+}
+
+interface Teacher {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string;
+  department_id: string;
+  department_name: string;
+  qualification?: string;
+  workload: number;
+  status: string;
+}
+
+interface Department {
+  id: string;
+  name: string;
+  code: string;
+  hod_id: string;
+  hod_name?: string;
+  faculty_count: number;
+  student_count: number;
+  subjects_count: number;
+}
+
+interface ClassItem {
+  id: string;
+  name: string;
+}
+
+interface Section {
+  id: string;
+  name: string;
+  class_id: string;
+}
+
+interface Subject {
+  id: string;
+  name: string;
+  code: string;
+  department_id: string;
+  department_name?: string;
+  credits: number;
+}
+
+interface FeeStructure {
+  id: string;
+  name: string;
+  class_id: string;
+  class_name: string;
+  amount: number;
+  due_date: string;
+  academic_year_id: string;
+  academic_year_name: string;
+}
+
+interface Timetable {
+  id: string;
+  class_id: string;
+  section_id: string;
+  subject_id: string;
+  subject_name: string;
+  teacher_id: string;
+  teacher_name: string;
+  day_of_week: number;
+  start_time: string;
+  end_time: string;
+  room: string;
+}
+
+interface StudentFormState {
+  first_name: string;
+  last_name: string;
+  email: string;
+  password: string;
+  admission_number: string;
+  roll_number: string;
+  class_id: string;
+  section_id: string;
+  parent_email: string;
+  dob: string;
+  gender: string;
+  address: string;
+}
+
+interface TeacherFormState {
+  first_name: string;
+  last_name: string;
+  email: string;
+  password: string;
+  phone: string;
+  department_id: string;
+  qualification: string;
+}
+
+interface DepartmentFormState {
+  name: string;
+  code: string;
+  hod_id: string;
+}
+
+interface TimetableFormState {
+  class_id: string;
+  section_id: string;
+  subject_id: string;
+  teacher_id: string;
+  day_of_week: string;
+  start_time: string;
+  end_time: string;
+  room: string;
+}
+
+interface FeeFormState {
+  name: string;
+  class_id: string;
+  amount: string;
+  due_date: string;
+  academic_year_id: string;
+}
+
+interface SubjectFormState {
+  name: string;
+  code: string;
+  department_id: string;
+  credits: string;
+}
+
+interface Notification {
+  id: number;
+  type: 'success' | 'error';
+  message: string;
+}
+
+interface TabDef {
+  id: TabId;
+  label: string;
+}
+
+type TabId = 'overview' | 'students' | 'teachers' | 'departments' | 'timetables' | 'billing';
+
+const TABS: TabDef[] = [
+  { id: 'overview', label: 'Overview' },
+  { id: 'students', label: 'Students' },
+  { id: 'teachers', label: 'Faculty' },
+  { id: 'departments', label: 'Departments' },
+  { id: 'timetables', label: 'Timetables' },
+  { id: 'billing', label: 'Finance' },
+];
+
+const COLORS = ['#06b6d4', '#3b82f6', '#f59e0b', '#ef4444'];
+
+const DEFAULT_STUDENT_FORM: StudentFormState = {
+  first_name: '', last_name: '', email: '', password: '',
+  admission_number: '', roll_number: '', class_id: '', section_id: '',
+  parent_email: '', dob: '2010-01-01', gender: 'Male', address: '',
+};
+
+const DEFAULT_TEACHER_FORM: TeacherFormState = {
+  first_name: '', last_name: '', email: '', password: '',
+  phone: '', department_id: '', qualification: '',
+};
+
+const DEFAULT_DEPT_FORM: DepartmentFormState = { name: '', code: '', hod_id: '' };
+
+const DEFAULT_TT_FORM: TimetableFormState = {
+  class_id: '', section_id: '', subject_id: '', teacher_id: '',
+  day_of_week: '1', start_time: '09:00', end_time: '10:00', room: '',
+};
+
+const DEFAULT_FEE_FORM: FeeFormState = {
+  name: '', class_id: '', amount: '', due_date: '2026-07-01', academic_year_id: 'ay-1',
+};
+
+const DEFAULT_SUB_FORM: SubjectFormState = {
+  name: '', code: '', department_id: '', credits: '3',
+};
+
+function AdminDashboard() {
   const { user } = useAuthStore();
   const userRole = user?.role;
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'students' | 'teachers' | 'departments' | 'timetables' | 'billing'>('overview');
+  const [activeTab, setActiveTab] = useState<TabId>('overview');
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const nextNotifId = useRef(0);
 
-  
-  // States for API data
-  const [overview, setOverview] = useState<any>(null);
-  const [students, setStudents] = useState<any[]>([]);
-  const [teachers, setTeachers] = useState<any[]>([]);
-  const [departments, setDepartments] = useState<any[]>([]);
-  const [classes, setClasses] = useState<any[]>([]);
-  const [sections, setSections] = useState<any[]>([]);
-  const [subjects, setSubjects] = useState<any[]>([]);
-  const [timetables, setTimetables] = useState<any[]>([]);
-  const [feeStructures, setFeeStructures] = useState<any[]>([]);
+  const addNotification = useCallback((type: 'success' | 'error', message: string) => {
+    const id = nextNotifId.current++;
+    setNotifications(prev => [...prev, { id, type, message }]);
+    setTimeout(() => {
+      setNotifications(prev => prev.filter(n => n.id !== id));
+    }, 6000);
+  }, []);
 
-  // Search & Filters
+  const [overview, setOverview] = useState<Overview | null>(null);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [classes, setClasses] = useState<ClassItem[]>([]);
+  const [sections, setSections] = useState<Section[]>([]);
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [timetables, setTimetables] = useState<Timetable[]>([]);
+  const [feeStructures, setFeeStructures] = useState<FeeStructure[]>([]);
+
   const [studentSearch, setStudentSearch] = useState('');
   const [classFilter, setClassFilter] = useState('');
   const [teacherSearch, setTeacherSearch] = useState('');
   const [deptFilter, setDeptFilter] = useState('');
 
-  // Form States
   const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  // Student Form
-  const [stdForm, setStdForm] = useState({
-    first_name: '', last_name: '', email: '', password: 'student123',
-    admission_number: '', roll_number: '', class_id: '', section_id: '',
-    parent_email: '', dob: '2010-01-01', gender: 'Male', address: ''
-  });
+  const [stdForm, setStdForm] = useState<StudentFormState>(DEFAULT_STUDENT_FORM);
+  const [teaForm, setTeaForm] = useState<TeacherFormState>(DEFAULT_TEACHER_FORM);
+  const [deptForm, setDeptForm] = useState<DepartmentFormState>(DEFAULT_DEPT_FORM);
+  const [ttForm, setTtForm] = useState<TimetableFormState>(DEFAULT_TT_FORM);
+  const [feeForm, setFeeForm] = useState<FeeFormState>(DEFAULT_FEE_FORM);
+  const [subForm, setSubForm] = useState<SubjectFormState>(DEFAULT_SUB_FORM);
 
-  // Teacher Form
-  const [teaForm, setTeaForm] = useState({
-    first_name: '', last_name: '', email: '', password: 'teacher123',
-    phone: '', department_id: '', qualification: ''
-  });
-
-  // Department Form
-  const [deptForm, setDeptForm] = useState({ name: '', code: '', hod_id: '' });
-
-  // Timetable Slot Form
-  const [ttForm, setTtForm] = useState({
-    class_id: '', section_id: '', subject_id: '', teacher_id: '',
-    day_of_week: '1', start_time: '09:00', end_time: '10:00', room: ''
-  });
-
-  // Fee Form
-  const [feeForm, setFeeForm] = useState({
-    name: '', class_id: '', amount: '', due_date: '2026-07-01', academic_year_id: 'ay-1'
-  });
-
-  // Subject Form
-  const [subForm, setSubForm] = useState({
-    name: '', code: '', department_id: '', credits: '3'
-  });
+  // Confirmation dialog state
+  const [confirmDialog, setConfirmDialog] = useState<{
+    message: string;
+    onConfirm: () => void;
+  } | null>(null);
 
   useEffect(() => {
-    fetchOverview();
-    fetchStudents();
-    fetchTeachers();
-    fetchDepartments();
-    fetchSchoolData();
-    fetchFeeStructures();
-  }, []);
+    const controller = new AbortController();
 
-  const fetchOverview = async () => {
-    try {
-      const res = await api.get('/analytics/overview');
-      setOverview(res.data.data);
-    } catch (e) {
-      console.error('Error fetching overview:', e);
-    }
-  };
+    const load = async () => {
+      try {
+        const [overviewRes, studentsRes, teachersRes, departmentsRes] = await Promise.all([
+          api.get('/analytics/overview', { signal: controller.signal }),
+          api.get('/students', { signal: controller.signal }),
+          api.get('/teachers', { signal: controller.signal }),
+          api.get('/departments', { signal: controller.signal }),
+        ]);
+        if (!controller.signal.aborted) {
+          setOverview(overviewRes.data.data);
+          setStudents(studentsRes.data.data);
+          setTeachers(teachersRes.data.data);
+          setDepartments(departmentsRes.data.data);
+        }
 
-  const fetchStudents = async () => {
-    try {
-      const res = await api.get('/students');
-      setStudents(res.data.data);
-    } catch (e) {
-      console.error(e);
-    }
-  };
+        const [classesRes, sectionsRes, subjectsRes, feeRes] = await Promise.all([
+          api.get('/school/classes', { signal: controller.signal }),
+          api.get('/school/sections', { signal: controller.signal }),
+          api.get('/school/subjects', { signal: controller.signal }),
+          api.get('/payments/structures', { signal: controller.signal }),
+        ]);
+        if (controller.signal.aborted) return;
+        setClasses(classesRes.data.data);
+        setSections(sectionsRes.data.data);
+        setSubjects(subjectsRes.data.data);
+        setFeeStructures(feeRes.data.data);
 
-  const fetchTeachers = async () => {
-    try {
-      const res = await api.get('/teachers');
-      setTeachers(res.data.data);
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const fetchDepartments = async () => {
-    try {
-      const res = await api.get('/departments');
-      setDepartments(res.data.data);
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const fetchSchoolData = async () => {
-    try {
-      const classesRes = await api.get('/school/classes');
-      const sectionsRes = await api.get('/school/sections');
-      const subjectsRes = await api.get('/school/subjects');
-      setClasses(classesRes.data.data);
-      setSections(sectionsRes.data.data);
-      setSubjects(subjectsRes.data.data);
-
-      if (classesRes.data.data.length > 0 && sectionsRes.data.data.length > 0) {
-        // Initial timetable fetch for the first class/section
-        fetchClassTimetable(classesRes.data.data[0].id, sectionsRes.data.data[0].id);
+        if (classesRes.data.data.length > 0 && sectionsRes.data.data.length > 0) {
+          const ttRes = await api.get(`/timetables/class/${classesRes.data.data[0].id}/${sectionsRes.data.data[0].id}`, {
+            signal: controller.signal,
+          });
+          if (!controller.signal.aborted) {
+            setTimetables(ttRes.data.data);
+          }
+        }
+      } catch (e: any) {
+        if (e?.name !== 'AbortError' && !controller.signal.aborted) {
+          addNotification('error', 'Failed to load dashboard data. Please refresh the page.');
+        }
       }
-    } catch (e) {
-      console.error(e);
-    }
-  };
+    };
 
-  const fetchClassTimetable = async (classId: string, sectionId: string) => {
+    load();
+
+    return () => controller.abort();
+  }, [addNotification]);
+
+  const fetchClassTimetable = useCallback(async (classId: string, sectionId: string) => {
     try {
       const res = await api.get(`/timetables/class/${classId}/${sectionId}`);
       setTimetables(res.data.data);
-    } catch (e) {
-      console.error(e);
+    } catch {
+      addNotification('error', 'Failed to load timetable data.');
     }
-  };
+  }, [addNotification]);
 
-  const fetchFeeStructures = async () => {
-    try {
-      const res = await api.get('/payments/structures');
-      setFeeStructures(res.data.data);
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  // Admission handler
-  const handleStudentAdmission = async (e: React.FormEvent) => {
+  const handleStudentAdmission = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setErrorMsg(null);
-    setSuccessMsg(null);
 
     try {
       await api.post('/students', stdForm);
-      setSuccessMsg('Student admitted successfully.');
-      fetchStudents();
-      fetchOverview();
-      // Reset
-      setStdForm({
-        first_name: '', last_name: '', email: '', password: 'student123',
-        admission_number: '', roll_number: '', class_id: '', section_id: '',
-        parent_email: '', dob: '2010-01-01', gender: 'Male', address: ''
-      });
+      addNotification('success', 'Student admitted successfully.');
+      const res = await api.get('/students');
+      setStudents(res.data.data);
+      const overviewRes = await api.get('/analytics/overview');
+      setOverview(overviewRes.data.data);
+      setStdForm(DEFAULT_STUDENT_FORM);
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Failed to admit student.');
+      addNotification('error', err.response?.data?.message || 'Failed to admit student.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [stdForm, addNotification]);
 
-  // Faculty creation
-  const handleTeacherRegistration = async (e: React.FormEvent) => {
+  const handleTeacherRegistration = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setErrorMsg(null);
-    setSuccessMsg(null);
 
     try {
       await api.post('/teachers', teaForm);
-      setSuccessMsg('Teacher registered successfully.');
-      fetchTeachers();
-      fetchOverview();
-      setTeaForm({
-        first_name: '', last_name: '', email: '', password: 'teacher123',
-        phone: '', department_id: '', qualification: ''
-      });
+      addNotification('success', 'Teacher registered successfully.');
+      const res = await api.get('/teachers');
+      setTeachers(res.data.data);
+      const overviewRes = await api.get('/analytics/overview');
+      setOverview(overviewRes.data.data);
+      setTeaForm(DEFAULT_TEACHER_FORM);
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Failed to register teacher.');
+      addNotification('error', err.response?.data?.message || 'Failed to register teacher.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [teaForm, addNotification]);
 
-  // Department creation
-  const handleCreateDept = async (e: React.FormEvent) => {
+  const handleCreateDept = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setErrorMsg(null);
-    setSuccessMsg(null);
 
     try {
       await api.post('/departments', deptForm);
-      setSuccessMsg('Department created.');
-      fetchDepartments();
-      fetchOverview();
-      setDeptForm({ name: '', code: '', hod_id: '' });
+      addNotification('success', 'Department created.');
+      const res = await api.get('/departments');
+      setDepartments(res.data.data);
+      const overviewRes = await api.get('/analytics/overview');
+      setOverview(overviewRes.data.data);
+      setDeptForm(DEFAULT_DEPT_FORM);
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Failed to create department.');
+      addNotification('error', err.response?.data?.message || 'Failed to create department.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [deptForm, addNotification]);
 
-  // Timetable scheduling
-  const handleScheduleSlot = async (e: React.FormEvent) => {
+  const handleScheduleSlot = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setErrorMsg(null);
-    setSuccessMsg(null);
 
     try {
       await api.post('/timetables', {
         ...ttForm,
         day_of_week: parseInt(ttForm.day_of_week, 10),
         start_time: `${ttForm.start_time}:00`,
-        end_time: `${ttForm.end_time}:00`
+        end_time: `${ttForm.end_time}:00`,
       });
-      setSuccessMsg('Timetable slot scheduled.');
+      addNotification('success', 'Timetable slot scheduled.');
       if (ttForm.class_id && ttForm.section_id) {
         fetchClassTimetable(ttForm.class_id, ttForm.section_id);
       }
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Conflict detected or slot scheduling failed.');
+      addNotification('error', err.response?.data?.message || 'Conflict detected or slot scheduling failed.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [ttForm, fetchClassTimetable, addNotification]);
 
-  // Fee creation
-  const handleCreateFee = async (e: React.FormEvent) => {
+  const handleCreateFee = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setErrorMsg(null);
-    setSuccessMsg(null);
 
     try {
-      // Find current academic year UUID
+      const amountVal = feeForm.amount ? parseFloat(feeForm.amount) : 0;
       await api.post('/payments/structures', {
         name: feeForm.name,
         class_id: feeForm.class_id || null,
-        amount: parseFloat(feeForm.amount),
+        amount: amountVal,
         due_date: feeForm.due_date,
-        academic_year_id: 'ay-1' // hardcoded mock seed relation
+        academic_year_id: 'ay-1',
       });
-      setSuccessMsg('Fee structure declared.');
-      fetchFeeStructures();
-      setFeeForm({ name: '', class_id: '', amount: '', due_date: '2026-07-01', academic_year_id: 'ay-1' });
+      addNotification('success', 'Fee structure declared.');
+      const res = await api.get('/payments/structures');
+      setFeeStructures(res.data.data);
+      setFeeForm(DEFAULT_FEE_FORM);
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Failed to create fee structure.');
+      addNotification('error', err.response?.data?.message || 'Failed to create fee structure.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [feeForm, addNotification]);
 
-  // Subject creation
-  const handleCreateSubject = async (e: React.FormEvent) => {
+  const handleCreateSubject = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setErrorMsg(null);
-    setSuccessMsg(null);
 
     try {
       await api.post('/school/subjects', {
         ...subForm,
-        credits: parseInt(subForm.credits, 10) || 3
+        credits: parseInt(subForm.credits, 10) || 3,
       });
-      setSuccessMsg('Subject declared successfully.');
+      addNotification('success', 'Subject declared successfully.');
       const res = await api.get('/school/subjects');
       setSubjects(res.data.data);
-      setSubForm({ name: '', code: '', department_id: '', credits: '3' });
+      setSubForm(DEFAULT_SUB_FORM);
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Failed to create subject.');
+      addNotification('error', err.response?.data?.message || 'Failed to create subject.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [subForm, addNotification]);
 
-  // Student Delete
-  const handleDeleteStudent = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this student record?')) return;
+  const handleDeleteStudent = useCallback(async (id: string) => {
     try {
       await api.delete(`/students/${id}`);
-      fetchStudents();
-      fetchOverview();
-    } catch (e) {
-      console.error(e);
+      addNotification('success', 'Student deleted successfully.');
+      const res = await api.get('/students');
+      setStudents(res.data.data);
+      const overviewRes = await api.get('/analytics/overview');
+      setOverview(overviewRes.data.data);
+    } catch {
+      addNotification('error', 'Failed to delete student record.');
     }
-  };
+  }, [addNotification]);
 
-  // Teacher Delete
-  const handleDeleteTeacher = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this teacher record?')) return;
+  const handleDeleteTeacher = useCallback(async (id: string) => {
     try {
       await api.delete(`/teachers/${id}`);
-      fetchTeachers();
-      fetchOverview();
-    } catch (e) {
-      console.error(e);
+      addNotification('success', 'Teacher deleted successfully.');
+      const res = await api.get('/teachers');
+      setTeachers(res.data.data);
+      const overviewRes = await api.get('/analytics/overview');
+      setOverview(overviewRes.data.data);
+    } catch {
+      addNotification('error', 'Failed to delete teacher record.');
     }
-  };
+  }, [addNotification]);
 
-  // Department Delete
-  const handleDeleteDept = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this department?')) return;
+  const handleDeleteDept = useCallback(async (id: string) => {
     try {
       await api.delete(`/departments/${id}`);
-      fetchDepartments();
-      fetchOverview();
-    } catch (e) {
-      console.error(e);
+      addNotification('success', 'Department deleted successfully.');
+      const res = await api.get('/departments');
+      setDepartments(res.data.data);
+      const overviewRes = await api.get('/analytics/overview');
+      setOverview(overviewRes.data.data);
+    } catch {
+      addNotification('error', 'Failed to delete department.');
     }
-  };
+  }, [addNotification]);
 
-  // Colors for charts
-  const COLORS = ['#06b6d4', '#3b82f6', '#f59e0b', '#ef4444'];
+  const requestDeleteConfirm = useCallback((message: string, onConfirm: () => void) => {
+    setConfirmDialog({ message, onConfirm });
+  }, []);
 
-  const filteredStudents = students.filter(s => {
-    const matchesSearch = `${s.first_name} ${s.last_name}`.toLowerCase().includes(studentSearch.toLowerCase()) ||
-                          s.admission_number.toLowerCase().includes(studentSearch.toLowerCase());
-    const matchesClass = classFilter ? s.class_id === classFilter : true;
-    return matchesSearch && matchesClass;
-  });
+  const filteredStudents = useMemo(() => {
+    const q = studentSearch.toLowerCase();
+    return students.filter(s => {
+      const matchesSearch = `${s.first_name} ${s.last_name}`.toLowerCase().includes(q) ||
+        s.admission_number.toLowerCase().includes(q);
+      const matchesClass = classFilter ? s.class_id === classFilter : true;
+      return matchesSearch && matchesClass;
+    });
+  }, [students, studentSearch, classFilter]);
 
-  const filteredTeachers = teachers.filter(t => {
-    const matchesSearch = `${t.first_name} ${t.last_name}`.toLowerCase().includes(teacherSearch.toLowerCase());
-    const matchesDept = deptFilter ? t.department_id === deptFilter : true;
-    return matchesSearch && matchesDept;
-  });
+  const filteredTeachers = useMemo(() => {
+    const q = teacherSearch.toLowerCase();
+    return teachers.filter(t => {
+      const matchesSearch = `${t.first_name} ${t.last_name}`.toLowerCase().includes(q);
+      const matchesDept = deptFilter ? t.department_id === deptFilter : true;
+      return matchesSearch && matchesDept;
+    });
+  }, [teachers, teacherSearch, deptFilter]);
 
   return (
     <div className="space-y-8 text-slate-100">
+      {/* Notifications */}
+      {notifications.length > 0 && (
+        <div className="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm" role="alert" aria-live="polite">
+          {notifications.map(n => (
+            <div
+              key={n.id}
+              className={`p-4 rounded-2xl text-sm flex items-center gap-2 shadow-lg border ${
+                n.type === 'success'
+                  ? 'bg-emerald-950/90 border-emerald-800/40 text-emerald-400'
+                  : 'bg-rose-950/90 border-rose-800/40 text-rose-400'
+              }`}
+            >
+              {n.type === 'success' ? <CheckCircle2 className="h-5 w-5 shrink-0" /> : <AlertCircle className="h-5 w-5 shrink-0" />}
+              <span>{n.message}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Confirmation Dialog */}
+      {confirmDialog && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="confirm-title"
+        >
+          <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl max-w-md w-full mx-4 shadow-2xl space-y-4">
+            <h3 id="confirm-title" className="text-lg font-bold text-slate-100">Confirm Action</h3>
+            <p className="text-sm text-slate-400">{confirmDialog.message}</p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setConfirmDialog(null)}
+                className="px-4 py-2 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  confirmDialog.onConfirm();
+                  setConfirmDialog(null);
+                }}
+                className="px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 text-white hover:bg-rose-500 transition"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Title & Tabs */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-800 pb-4">
         <div>
@@ -356,22 +576,15 @@ export default function AdminDashboard() {
           <p className="text-slate-400 text-sm mt-1">Configure campus registries, schedules, payments, and view real-time stats.</p>
         </div>
 
-        {/* Custom Tab Switcher */}
-        <div className="flex flex-wrap gap-1 bg-slate-900 border border-slate-800 p-1.5 rounded-2xl max-w-full">
-          {[
-            { id: 'overview', label: 'Overview' },
-            { id: 'students', label: 'Students' },
-            { id: 'teachers', label: 'Faculty' },
-            { id: 'departments', label: 'Departments' },
-            { id: 'timetables', label: 'Timetables' },
-            { id: 'billing', label: 'Finance' },
-          ].map((tab) => (
+        <div className="flex flex-wrap gap-1 bg-slate-900 border border-slate-800 p-1.5 rounded-2xl max-w-full" role="tablist" aria-label="Dashboard sections">
+          {TABS.map((tab) => (
             <button
               key={tab.id}
+              role="tab"
+              aria-selected={activeTab === tab.id}
+              aria-controls={`tabpanel-${tab.id}`}
               onClick={() => {
-                setActiveTab(tab.id as any);
-                setErrorMsg(null);
-                setSuccessMsg(null);
+                setActiveTab(tab.id);
               }}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
                 activeTab === tab.id ? 'bg-cyan-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-white'
@@ -383,24 +596,9 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Success/Error Alerts */}
-      {successMsg && (
-        <div className="p-4 bg-emerald-950/60 border border-emerald-800/40 rounded-2xl text-emerald-400 text-sm flex items-center gap-2">
-          <CheckCircle2 className="h-5 w-5" />
-          <span>{successMsg}</span>
-        </div>
-      )}
-      {errorMsg && (
-        <div className="p-4 bg-rose-950/60 border border-rose-800/40 rounded-2xl text-rose-400 text-sm flex items-center gap-2">
-          <AlertCircle className="h-5 w-5" />
-          <span>{errorMsg}</span>
-        </div>
-      )}
-
       {/* TAB CONTENT: OVERVIEW */}
       {activeTab === 'overview' && (
-        <div className="space-y-6">
-          {/* Counters Grid */}
+        <div className="space-y-6" id="tabpanel-overview" role="tabpanel" aria-label="Overview">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-3xl space-y-4 shadow-xl">
               <div className="flex justify-between items-center">
@@ -455,9 +653,7 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          {/* Recharts Graphical Panels */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Revenue Trend Area Chart */}
             <div className="lg:col-span-2 bg-slate-900/60 border border-slate-800 p-6 rounded-3xl space-y-4">
               <div className="flex justify-between items-center">
                 <div className="space-y-1">
@@ -474,8 +670,8 @@ export default function AdminDashboard() {
                   <AreaChart data={overview?.revenueTrends || []}>
                     <defs>
                       <linearGradient id="colorVal" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.2}/>
-                        <stop offset="95%" stopColor="#06b6d4" stopOpacity={0}/>
+                        <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.2} />
+                        <stop offset="95%" stopColor="#06b6d4" stopOpacity={0} />
                       </linearGradient>
                     </defs>
                     <XAxis dataKey="name" stroke="#64748b" fontSize={11} />
@@ -487,7 +683,6 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            {/* Attendance Pie Chart */}
             <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-3xl flex flex-col justify-between">
               <div>
                 <span className="text-slate-400 text-xs font-bold uppercase tracking-wider block">Campus Operations</span>
@@ -503,7 +698,7 @@ export default function AdminDashboard() {
                       paddingAngle={3}
                       dataKey="value"
                     >
-                      {(overview?.attendanceStats || []).map((entry: any, index: number) => (
+                      {(overview?.attendanceStats || []).map((entry: { name: string; value: number }, index: number) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
@@ -511,9 +706,8 @@ export default function AdminDashboard() {
                   </PieChart>
                 </ResponsiveContainer>
               </div>
-              {/* Legend */}
               <div className="grid grid-cols-2 gap-2 text-xs">
-                {(overview?.attendanceStats || []).map((entry: any, idx: number) => (
+                {(overview?.attendanceStats || []).map((entry: { name: string; value: number }, idx: number) => (
                   <div key={idx} className="flex items-center gap-2">
                     <span className="h-3 w-3 rounded-full shrink-0" style={{ backgroundColor: COLORS[idx % COLORS.length] }} />
                     <span className="text-slate-400 truncate">{entry.name}: {entry.value}%</span>
@@ -523,14 +717,13 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          {/* Recent Activities Panel */}
           <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-3xl space-y-4">
             <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
               <Activity className="h-5 w-5 text-cyan-400" />
               <h2 className="text-lg font-bold">Recent Institutional Activities</h2>
             </div>
             <div className="divide-y divide-slate-800/60">
-              {(overview?.recentActivities || []).map((act: any) => (
+              {(overview?.recentActivities || []).map((act: ActivityItem) => (
                 <div key={act.id} className="py-3.5 flex justify-between items-start gap-4 text-sm">
                   <div className="flex items-center gap-3">
                     <span className={`h-2.5 w-2.5 rounded-full shrink-0 ${
@@ -548,8 +741,7 @@ export default function AdminDashboard() {
 
       {/* TAB CONTENT: STUDENTS */}
       {activeTab === 'students' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-          {/* Admit Student Form */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start" id="tabpanel-students" role="tabpanel" aria-label="Students">
           <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-3xl space-y-4">
             <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
               <Plus className="h-5 w-5 text-cyan-400" />
@@ -559,8 +751,9 @@ export default function AdminDashboard() {
             <form onSubmit={handleStudentAdmission} className="space-y-3.5 text-xs">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-slate-400 font-semibold block mb-1">First Name</label>
+                  <label className="text-slate-400 font-semibold block mb-1" htmlFor="std-first-name">First Name</label>
                   <input
+                    id="std-first-name"
                     type="text" required
                     value={stdForm.first_name}
                     onChange={(e) => setStdForm({ ...stdForm, first_name: e.target.value })}
@@ -569,8 +762,9 @@ export default function AdminDashboard() {
                   />
                 </div>
                 <div>
-                  <label className="text-slate-400 font-semibold block mb-1">Last Name</label>
+                  <label className="text-slate-400 font-semibold block mb-1" htmlFor="std-last-name">Last Name</label>
                   <input
+                    id="std-last-name"
                     type="text" required
                     value={stdForm.last_name}
                     onChange={(e) => setStdForm({ ...stdForm, last_name: e.target.value })}
@@ -581,8 +775,9 @@ export default function AdminDashboard() {
               </div>
 
               <div>
-                <label className="text-slate-400 font-semibold block mb-1">Portal Login Email</label>
+                <label className="text-slate-400 font-semibold block mb-1" htmlFor="std-email">Portal Login Email</label>
                 <input
+                  id="std-email"
                   type="email" required
                   value={stdForm.email}
                   onChange={(e) => setStdForm({ ...stdForm, email: e.target.value })}
@@ -593,8 +788,9 @@ export default function AdminDashboard() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-slate-400 font-semibold block mb-1">Admission No.</label>
+                  <label className="text-slate-400 font-semibold block mb-1" htmlFor="std-adm-no">Admission No.</label>
                   <input
+                    id="std-adm-no"
                     type="text" required
                     value={stdForm.admission_number}
                     onChange={(e) => setStdForm({ ...stdForm, admission_number: e.target.value })}
@@ -603,8 +799,9 @@ export default function AdminDashboard() {
                   />
                 </div>
                 <div>
-                  <label className="text-slate-400 font-semibold block mb-1">Roll Number</label>
+                  <label className="text-slate-400 font-semibold block mb-1" htmlFor="std-roll-no">Roll Number</label>
                   <input
+                    id="std-roll-no"
                     type="text"
                     value={stdForm.roll_number}
                     onChange={(e) => setStdForm({ ...stdForm, roll_number: e.target.value })}
@@ -616,8 +813,9 @@ export default function AdminDashboard() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-slate-400 font-semibold block mb-1">Grade Class</label>
+                  <label className="text-slate-400 font-semibold block mb-1" htmlFor="std-class">Grade Class</label>
                   <select
+                    id="std-class"
                     required
                     value={stdForm.class_id}
                     onChange={(e) => setStdForm({ ...stdForm, class_id: e.target.value })}
@@ -628,8 +826,9 @@ export default function AdminDashboard() {
                   </select>
                 </div>
                 <div>
-                  <label className="text-slate-400 font-semibold block mb-1">Grade Section</label>
+                  <label className="text-slate-400 font-semibold block mb-1" htmlFor="std-section">Grade Section</label>
                   <select
+                    id="std-section"
                     required
                     value={stdForm.section_id}
                     onChange={(e) => setStdForm({ ...stdForm, section_id: e.target.value })}
@@ -644,8 +843,9 @@ export default function AdminDashboard() {
               </div>
 
               <div>
-                <label className="text-slate-400 font-semibold block mb-1">Parent Email (Optional)</label>
+                <label className="text-slate-400 font-semibold block mb-1" htmlFor="std-parent-email">Parent Email (Optional)</label>
                 <input
+                  id="std-parent-email"
                   type="email"
                   value={stdForm.parent_email}
                   onChange={(e) => setStdForm({ ...stdForm, parent_email: e.target.value })}
@@ -656,8 +856,9 @@ export default function AdminDashboard() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-slate-400 font-semibold block mb-1">Birth Date</label>
+                  <label className="text-slate-400 font-semibold block mb-1" htmlFor="std-dob">Birth Date</label>
                   <input
+                    id="std-dob"
                     type="date" required
                     value={stdForm.dob}
                     onChange={(e) => setStdForm({ ...stdForm, dob: e.target.value })}
@@ -665,8 +866,9 @@ export default function AdminDashboard() {
                   />
                 </div>
                 <div>
-                  <label className="text-slate-400 font-semibold block mb-1">Gender</label>
+                  <label className="text-slate-400 font-semibold block mb-1" htmlFor="std-gender">Gender</label>
                   <select
+                    id="std-gender"
                     value={stdForm.gender}
                     onChange={(e) => setStdForm({ ...stdForm, gender: e.target.value })}
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 outline-none text-xs"
@@ -679,8 +881,9 @@ export default function AdminDashboard() {
               </div>
 
               <div>
-                <label className="text-slate-400 font-semibold block mb-1">Residential Address</label>
+                <label className="text-slate-400 font-semibold block mb-1" htmlFor="std-address">Residential Address</label>
                 <textarea
+                  id="std-address"
                   value={stdForm.address}
                   onChange={(e) => setStdForm({ ...stdForm, address: e.target.value })}
                   rows={2}
@@ -699,7 +902,6 @@ export default function AdminDashboard() {
             </form>
           </div>
 
-          {/* Student Directory Table */}
           <div className="lg:col-span-2 bg-slate-900/60 border border-slate-800 p-6 rounded-3xl space-y-4">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-800 pb-3">
               <h2 className="text-lg font-bold">Students Directory</h2>
@@ -712,12 +914,14 @@ export default function AdminDashboard() {
                     onChange={(e) => setStudentSearch(e.target.value)}
                     placeholder="Search name or ID..."
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-1.5 text-xs outline-none focus:border-cyan-500"
+                    aria-label="Search students by name or admission number"
                   />
                 </div>
                 <select
                   value={classFilter}
                   onChange={(e) => setClassFilter(e.target.value)}
                   className="bg-slate-950 border border-slate-800 rounded-xl p-1.5 text-xs outline-none"
+                  aria-label="Filter students by class"
                 >
                   <option value="">All Classes</option>
                   {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -759,9 +963,13 @@ export default function AdminDashboard() {
                       </td>
                       <td className="py-3 text-right">
                         {userRole !== 'HOD' && (
-                          <button 
-                            onClick={() => handleDeleteStudent(std.id)}
+                          <button
+                            onClick={() => requestDeleteConfirm(
+                              `Are you sure you want to delete student "${std.first_name} ${std.last_name}"?`,
+                              () => handleDeleteStudent(std.id)
+                            )}
                             className="p-1 text-slate-500 hover:text-rose-400 hover:bg-slate-800 rounded-lg transition"
+                            aria-label={`Delete student ${std.first_name} ${std.last_name}`}
                           >
                             <Trash2 className="h-4 w-4" />
                           </button>
@@ -783,8 +991,7 @@ export default function AdminDashboard() {
 
       {/* TAB CONTENT: TEACHERS */}
       {activeTab === 'teachers' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-          {/* Create Teacher Form */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start" id="tabpanel-teachers" role="tabpanel" aria-label="Teachers">
           {userRole !== 'HOD' ? (
             <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-3xl space-y-4">
               <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
@@ -795,8 +1002,9 @@ export default function AdminDashboard() {
               <form onSubmit={handleTeacherRegistration} className="space-y-3.5 text-xs">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-slate-400 font-semibold block mb-1">First Name</label>
+                    <label className="text-slate-400 font-semibold block mb-1" htmlFor="tea-first-name">First Name</label>
                     <input
+                      id="tea-first-name"
                       type="text" required
                       value={teaForm.first_name}
                       onChange={(e) => setTeaForm({ ...teaForm, first_name: e.target.value })}
@@ -805,8 +1013,9 @@ export default function AdminDashboard() {
                     />
                   </div>
                   <div>
-                    <label className="text-slate-400 font-semibold block mb-1">Last Name</label>
+                    <label className="text-slate-400 font-semibold block mb-1" htmlFor="tea-last-name">Last Name</label>
                     <input
+                      id="tea-last-name"
                       type="text" required
                       value={teaForm.last_name}
                       onChange={(e) => setTeaForm({ ...teaForm, last_name: e.target.value })}
@@ -817,8 +1026,9 @@ export default function AdminDashboard() {
                 </div>
 
                 <div>
-                  <label className="text-slate-400 font-semibold block mb-1">Faculty Email</label>
+                  <label className="text-slate-400 font-semibold block mb-1" htmlFor="tea-email">Faculty Email</label>
                   <input
+                    id="tea-email"
                     type="email" required
                     value={teaForm.email}
                     onChange={(e) => setTeaForm({ ...teaForm, email: e.target.value })}
@@ -828,8 +1038,9 @@ export default function AdminDashboard() {
                 </div>
 
                 <div>
-                  <label className="text-slate-400 font-semibold block mb-1">Phone Number</label>
+                  <label className="text-slate-400 font-semibold block mb-1" htmlFor="tea-phone">Phone Number</label>
                   <input
+                    id="tea-phone"
                     type="text"
                     value={teaForm.phone}
                     onChange={(e) => setTeaForm({ ...teaForm, phone: e.target.value })}
@@ -839,8 +1050,9 @@ export default function AdminDashboard() {
                 </div>
 
                 <div>
-                  <label className="text-slate-400 font-semibold block mb-1">Department assignment</label>
+                  <label className="text-slate-400 font-semibold block mb-1" htmlFor="tea-dept">Department assignment</label>
                   <select
+                    id="tea-dept"
                     value={teaForm.department_id}
                     onChange={(e) => setTeaForm({ ...teaForm, department_id: e.target.value })}
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 outline-none text-xs"
@@ -851,8 +1063,9 @@ export default function AdminDashboard() {
                 </div>
 
                 <div>
-                  <label className="text-slate-400 font-semibold block mb-1">Qualification</label>
+                  <label className="text-slate-400 font-semibold block mb-1" htmlFor="tea-qual">Qualification</label>
                   <input
+                    id="tea-qual"
                     type="text"
                     value={teaForm.qualification}
                     onChange={(e) => setTeaForm({ ...teaForm, qualification: e.target.value })}
@@ -880,7 +1093,6 @@ export default function AdminDashboard() {
             </div>
           )}
 
-          {/* Teacher Directory List */}
           <div className="lg:col-span-2 bg-slate-900/60 border border-slate-800 p-6 rounded-3xl space-y-4">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-800 pb-3">
               <h2 className="text-lg font-bold">Faculty directory & workload</h2>
@@ -893,12 +1105,14 @@ export default function AdminDashboard() {
                     onChange={(e) => setTeacherSearch(e.target.value)}
                     placeholder="Search name..."
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-1.5 text-xs outline-none focus:border-cyan-500"
+                    aria-label="Search teachers by name"
                   />
                 </div>
                 <select
                   value={deptFilter}
                   onChange={(e) => setDeptFilter(e.target.value)}
                   className="bg-slate-950 border border-slate-800 rounded-xl p-1.5 text-xs outline-none"
+                  aria-label="Filter teachers by department"
                 >
                   <option value="">All Departments</option>
                   {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
@@ -941,9 +1155,13 @@ export default function AdminDashboard() {
                       </td>
                       <td className="py-3 text-right">
                         {userRole !== 'HOD' && (
-                          <button 
-                            onClick={() => handleDeleteTeacher(t.id)}
+                          <button
+                            onClick={() => requestDeleteConfirm(
+                              `Are you sure you want to delete teacher "${t.first_name} ${t.last_name}"?`,
+                              () => handleDeleteTeacher(t.id)
+                            )}
                             className="p-1 text-slate-500 hover:text-rose-400 hover:bg-slate-800 rounded-lg transition"
+                            aria-label={`Delete teacher ${t.first_name} ${t.last_name}`}
                           >
                             <Trash2 className="h-4 w-4" />
                           </button>
@@ -965,9 +1183,8 @@ export default function AdminDashboard() {
 
       {/* TAB CONTENT: DEPARTMENTS */}
       {activeTab === 'departments' && (
-        <div className="space-y-8">
+        <div className="space-y-8" id="tabpanel-departments" role="tabpanel" aria-label="Departments">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-            {/* Create Dept Form */}
             {userRole !== 'HOD' ? (
               <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-3xl space-y-4">
                 <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
@@ -977,8 +1194,9 @@ export default function AdminDashboard() {
 
                 <form onSubmit={handleCreateDept} className="space-y-3.5 text-xs">
                   <div>
-                    <label className="text-slate-400 font-semibold block mb-1">Department Name</label>
+                    <label className="text-slate-400 font-semibold block mb-1" htmlFor="dept-name">Department Name</label>
                     <input
+                      id="dept-name"
                       type="text" required
                       value={deptForm.name}
                       onChange={(e) => setDeptForm({ ...deptForm, name: e.target.value })}
@@ -988,8 +1206,9 @@ export default function AdminDashboard() {
                   </div>
 
                   <div>
-                    <label className="text-slate-400 font-semibold block mb-1">Department Code</label>
+                    <label className="text-slate-400 font-semibold block mb-1" htmlFor="dept-code">Department Code</label>
                     <input
+                      id="dept-code"
                       type="text" required
                       value={deptForm.code}
                       onChange={(e) => setDeptForm({ ...deptForm, code: e.target.value })}
@@ -999,8 +1218,9 @@ export default function AdminDashboard() {
                   </div>
 
                   <div>
-                    <label className="text-slate-400 font-semibold block mb-1">Assign HOD Faculty (Optional)</label>
+                    <label className="text-slate-400 font-semibold block mb-1" htmlFor="dept-hod">Assign HOD Faculty (Optional)</label>
                     <select
+                      id="dept-hod"
                       value={deptForm.hod_id}
                       onChange={(e) => setDeptForm({ ...deptForm, hod_id: e.target.value })}
                       className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 outline-none text-xs"
@@ -1029,7 +1249,6 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            {/* Department List & HOD Allocations */}
             <div className="lg:col-span-2 bg-slate-900/60 border border-slate-800 p-6 rounded-3xl space-y-4">
               <h2 className="text-lg font-bold border-b border-slate-800 pb-3">Departments wing statistics</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1041,9 +1260,13 @@ export default function AdminDashboard() {
                         <span className="text-[10px] font-mono font-bold text-cyan-400 bg-cyan-950 border border-cyan-800 px-1.5 py-0.5 rounded uppercase mt-1 inline-block">Code: {dept.code}</span>
                       </div>
                       {userRole !== 'HOD' && (
-                        <button 
-                          onClick={() => handleDeleteDept(dept.id)}
+                        <button
+                          onClick={() => requestDeleteConfirm(
+                            `Are you sure you want to delete department "${dept.name}"?`,
+                            () => handleDeleteDept(dept.id)
+                          )}
                           className="text-slate-600 hover:text-rose-400 transition"
+                          aria-label={`Delete department ${dept.name}`}
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -1074,9 +1297,7 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          {/* Subjects Management Section */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start border-t border-slate-800/60 pt-8">
-            {/* Create Subject Form */}
             {userRole !== 'HOD' ? (
               <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-3xl space-y-4">
                 <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
@@ -1086,8 +1307,9 @@ export default function AdminDashboard() {
 
                 <form onSubmit={handleCreateSubject} className="space-y-3.5 text-xs">
                   <div>
-                    <label className="text-slate-400 font-semibold block mb-1">Subject Name</label>
+                    <label className="text-slate-400 font-semibold block mb-1" htmlFor="sub-name">Subject Name</label>
                     <input
+                      id="sub-name"
                       type="text" required
                       value={subForm.name}
                       onChange={(e) => setSubForm({ ...subForm, name: e.target.value })}
@@ -1097,8 +1319,9 @@ export default function AdminDashboard() {
                   </div>
 
                   <div>
-                    <label className="text-slate-400 font-semibold block mb-1">Subject Code</label>
+                    <label className="text-slate-400 font-semibold block mb-1" htmlFor="sub-code">Subject Code</label>
                     <input
+                      id="sub-code"
                       type="text" required
                       value={subForm.code}
                       onChange={(e) => setSubForm({ ...subForm, code: e.target.value })}
@@ -1108,8 +1331,9 @@ export default function AdminDashboard() {
                   </div>
 
                   <div>
-                    <label className="text-slate-400 font-semibold block mb-1">Department Scope</label>
+                    <label className="text-slate-400 font-semibold block mb-1" htmlFor="sub-dept">Department Scope</label>
                     <select
+                      id="sub-dept"
                       required
                       value={subForm.department_id}
                       onChange={(e) => setSubForm({ ...subForm, department_id: e.target.value })}
@@ -1121,8 +1345,9 @@ export default function AdminDashboard() {
                   </div>
 
                   <div>
-                    <label className="text-slate-400 font-semibold block mb-1">Credits</label>
+                    <label className="text-slate-400 font-semibold block mb-1" htmlFor="sub-credits">Credits</label>
                     <input
+                      id="sub-credits"
                       type="number" required min="1" max="10"
                       value={subForm.credits}
                       onChange={(e) => setSubForm({ ...subForm, credits: e.target.value })}
@@ -1150,7 +1375,6 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            {/* Subject List */}
             <div className="lg:col-span-2 bg-slate-900/60 border border-slate-800 p-6 rounded-3xl space-y-4">
               <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
                 <BookCopy className="h-5 w-5 text-cyan-400" />
@@ -1190,8 +1414,7 @@ export default function AdminDashboard() {
 
       {/* TAB CONTENT: TIMETABLES */}
       {activeTab === 'timetables' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-          {/* Create Timetable Slot */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start" id="tabpanel-timetables" role="tabpanel" aria-label="Timetables">
           <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-3xl space-y-4">
             <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
               <Plus className="h-5 w-5 text-cyan-400" />
@@ -1201,8 +1424,9 @@ export default function AdminDashboard() {
             <form onSubmit={handleScheduleSlot} className="space-y-3.5 text-xs">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-slate-400 font-semibold block mb-1">Class Grade</label>
+                  <label className="text-slate-400 font-semibold block mb-1" htmlFor="tt-class">Class Grade</label>
                   <select
+                    id="tt-class"
                     required
                     value={ttForm.class_id}
                     onChange={(e) => setTtForm({ ...ttForm, class_id: e.target.value })}
@@ -1213,8 +1437,9 @@ export default function AdminDashboard() {
                   </select>
                 </div>
                 <div>
-                  <label className="text-slate-400 font-semibold block mb-1">Section</label>
+                  <label className="text-slate-400 font-semibold block mb-1" htmlFor="tt-section">Section</label>
                   <select
+                    id="tt-section"
                     required
                     value={ttForm.section_id}
                     onChange={(e) => setTtForm({ ...ttForm, section_id: e.target.value })}
@@ -1229,8 +1454,9 @@ export default function AdminDashboard() {
               </div>
 
               <div>
-                <label className="text-slate-400 font-semibold block mb-1">Subject</label>
+                <label className="text-slate-400 font-semibold block mb-1" htmlFor="tt-subject">Subject</label>
                 <select
+                  id="tt-subject"
                   required
                   value={ttForm.subject_id}
                   onChange={(e) => setTtForm({ ...ttForm, subject_id: e.target.value })}
@@ -1242,8 +1468,9 @@ export default function AdminDashboard() {
               </div>
 
               <div>
-                <label className="text-slate-400 font-semibold block mb-1">Teacher</label>
+                <label className="text-slate-400 font-semibold block mb-1" htmlFor="tt-teacher">Teacher</label>
                 <select
+                  id="tt-teacher"
                   required
                   value={ttForm.teacher_id}
                   onChange={(e) => setTtForm({ ...ttForm, teacher_id: e.target.value })}
@@ -1256,8 +1483,9 @@ export default function AdminDashboard() {
 
               <div className="grid grid-cols-3 gap-2">
                 <div>
-                  <label className="text-slate-400 font-semibold block mb-1">Day</label>
+                  <label className="text-slate-400 font-semibold block mb-1" htmlFor="tt-day">Day</label>
                   <select
+                    id="tt-day"
                     value={ttForm.day_of_week}
                     onChange={(e) => setTtForm({ ...ttForm, day_of_week: e.target.value })}
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 outline-none text-xs"
@@ -1270,8 +1498,9 @@ export default function AdminDashboard() {
                   </select>
                 </div>
                 <div>
-                  <label className="text-slate-400 font-semibold block mb-1">Start Time</label>
+                  <label className="text-slate-400 font-semibold block mb-1" htmlFor="tt-start">Start Time</label>
                   <input
+                    id="tt-start"
                     type="time" required
                     value={ttForm.start_time}
                     onChange={(e) => setTtForm({ ...ttForm, start_time: e.target.value })}
@@ -1279,8 +1508,9 @@ export default function AdminDashboard() {
                   />
                 </div>
                 <div>
-                  <label className="text-slate-400 font-semibold block mb-1">End Time</label>
+                  <label className="text-slate-400 font-semibold block mb-1" htmlFor="tt-end">End Time</label>
                   <input
+                    id="tt-end"
                     type="time" required
                     value={ttForm.end_time}
                     onChange={(e) => setTtForm({ ...ttForm, end_time: e.target.value })}
@@ -1290,8 +1520,9 @@ export default function AdminDashboard() {
               </div>
 
               <div>
-                <label className="text-slate-400 font-semibold block mb-1">Classroom / Laboratory</label>
+                <label className="text-slate-400 font-semibold block mb-1" htmlFor="tt-room">Classroom / Laboratory</label>
                 <input
+                  id="tt-room"
                   type="text" required
                   value={ttForm.room}
                   onChange={(e) => setTtForm({ ...ttForm, room: e.target.value })}
@@ -1310,7 +1541,6 @@ export default function AdminDashboard() {
             </form>
           </div>
 
-          {/* Timetable Calendar Schedule View */}
           <div className="lg:col-span-2 bg-slate-900/60 border border-slate-800 p-6 rounded-3xl space-y-6">
             <div className="flex justify-between items-center border-b border-slate-800 pb-3">
               <h2 className="text-lg font-bold">Timetables schedules calendar</h2>
@@ -1329,17 +1559,17 @@ export default function AdminDashboard() {
             <div className="grid grid-cols-1 gap-4">
               {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].map((dayName, idx) => {
                 const dayNum = idx + 1;
-                const slots = timetables.filter((t: any) => t.day_of_week === dayNum);
+                const slots = timetables.filter((t: Timetable) => t.day_of_week === dayNum);
                 return (
                   <div key={dayNum} className="p-4 bg-slate-950/40 border border-slate-850 rounded-2xl flex flex-col md:flex-row md:items-center gap-4">
                     <div className="w-24 font-extrabold text-slate-300 text-xs border-r border-slate-800 shrink-0 pr-2 uppercase tracking-wider">{dayName}</div>
                     <div className="flex flex-wrap gap-2 flex-1">
-                      {slots.map((s: any) => (
+                      {slots.map((s: Timetable) => (
                         <div key={s.id} className="bg-slate-900 border border-slate-800/80 px-3 py-2 rounded-xl text-left space-y-1 min-w-[140px]">
                           <span className="font-bold text-slate-200 block text-xs truncate">{s.subject_name}</span>
                           <span className="text-[10px] text-cyan-400 font-medium block">Room: {s.room}</span>
                           <div className="flex justify-between text-[9px] text-slate-500 font-mono mt-1">
-                            <span>{s.start_time.slice(0,5)} - {s.end_time.slice(0,5)}</span>
+                            <span>{s.start_time.slice(0, 5)} - {s.end_time.slice(0, 5)}</span>
                             <span>{s.teacher_name.split(' ')[0]}</span>
                           </div>
                         </div>
@@ -1356,8 +1586,7 @@ export default function AdminDashboard() {
 
       {/* TAB CONTENT: BILLING */}
       {activeTab === 'billing' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-          {/* Create Fee Structure */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start" id="tabpanel-billing" role="tabpanel" aria-label="Billing">
           <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-3xl space-y-4">
             <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
               <Plus className="h-5 w-5 text-cyan-400" />
@@ -1366,8 +1595,9 @@ export default function AdminDashboard() {
 
             <form onSubmit={handleCreateFee} className="space-y-3.5 text-xs">
               <div>
-                <label className="text-slate-400 font-semibold block mb-1">Fee Description Name</label>
+                <label className="text-slate-400 font-semibold block mb-1" htmlFor="fee-name">Fee Description Name</label>
                 <input
+                  id="fee-name"
                   type="text" required
                   value={feeForm.name}
                   onChange={(e) => setFeeForm({ ...feeForm, name: e.target.value })}
@@ -1377,8 +1607,9 @@ export default function AdminDashboard() {
               </div>
 
               <div>
-                <label className="text-slate-400 font-semibold block mb-1">Applicable Class (Optional)</label>
+                <label className="text-slate-400 font-semibold block mb-1" htmlFor="fee-class">Applicable Class (Optional)</label>
                 <select
+                  id="fee-class"
                   value={feeForm.class_id}
                   onChange={(e) => setFeeForm({ ...feeForm, class_id: e.target.value })}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 outline-none text-xs"
@@ -1389,8 +1620,9 @@ export default function AdminDashboard() {
               </div>
 
               <div>
-                <label className="text-slate-400 font-semibold block mb-1">Dues Amount ($)</label>
+                <label className="text-slate-400 font-semibold block mb-1" htmlFor="fee-amount">Dues Amount ($)</label>
                 <input
+                  id="fee-amount"
                   type="number" required
                   value={feeForm.amount}
                   onChange={(e) => setFeeForm({ ...feeForm, amount: e.target.value })}
@@ -1400,8 +1632,9 @@ export default function AdminDashboard() {
               </div>
 
               <div>
-                <label className="text-slate-400 font-semibold block mb-1">Payment Due Date</label>
+                <label className="text-slate-400 font-semibold block mb-1" htmlFor="fee-due-date">Payment Due Date</label>
                 <input
+                  id="fee-due-date"
                   type="date" required
                   value={feeForm.due_date}
                   onChange={(e) => setFeeForm({ ...feeForm, due_date: e.target.value })}
@@ -1419,7 +1652,6 @@ export default function AdminDashboard() {
             </form>
           </div>
 
-          {/* Fee Structures Catalog */}
           <div className="lg:col-span-2 bg-slate-900/60 border border-slate-800 p-6 rounded-3xl space-y-4">
             <h2 className="text-lg font-bold border-b border-slate-800 pb-3">Active Tuition Invoices & Fee Structures</h2>
             <div className="overflow-x-auto">
@@ -1438,7 +1670,7 @@ export default function AdminDashboard() {
                     <tr key={f.id} className="hover:bg-slate-850/30">
                       <td className="py-3 font-bold text-slate-200">{f.name}</td>
                       <td className="py-3">{f.class_name || 'All Classes'}</td>
-                      <td className="py-3 font-mono font-bold text-cyan-400">${parseFloat(f.amount).toFixed(2)}</td>
+                      <td className="py-3 font-mono font-bold text-cyan-400">${(f.amount ? parseFloat(String(f.amount)) : 0).toFixed(2)}</td>
                       <td className="py-3 font-mono">{f.due_date.split('T')[0]}</td>
                       <td className="py-3 text-slate-400">{f.academic_year_name}</td>
                     </tr>
@@ -1457,3 +1689,5 @@ export default function AdminDashboard() {
     </div>
   );
 }
+
+export default React.memo(AdminDashboard);

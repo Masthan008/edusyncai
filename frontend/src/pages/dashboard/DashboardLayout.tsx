@@ -10,6 +10,10 @@ import {
 export default function DashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notifPanelOpen, setNotifPanelOpen] = useState(false);
+  const [notifications] = useState<Array<{ type: 'info' | 'warning'; title: string; message: string }>>([
+    { type: 'info', title: 'Welcome to EduSync AI', message: 'The school management ERP portal is ready for your deployment.' },
+    { type: 'warning', title: 'Midterm Exam Grades', message: 'Grades compilation for Grade 10 organic chemistry has been published.' },
+  ]);
   const { user, profile, logout } = useAuthStore();
   const location = useLocation();
   const navigate = useNavigate();
@@ -88,6 +92,8 @@ export default function DashboardLayout() {
           <button 
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className="md:hidden p-1.5 hover:bg-slate-800 rounded-lg transition"
+            aria-label={sidebarOpen ? 'Close sidebar menu' : 'Open sidebar menu'}
+            aria-expanded={sidebarOpen}
           >
             <Menu className="h-6 w-6 text-slate-400" />
           </button>
@@ -113,13 +119,15 @@ export default function DashboardLayout() {
             <button 
               onClick={() => setNotifPanelOpen(!notifPanelOpen)}
               className="p-2 bg-slate-850 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-white rounded-xl transition relative"
+              aria-label={notifPanelOpen ? 'Close notifications' : 'Open notifications'}
+              aria-expanded={notifPanelOpen}
             >
-              <Bell className="h-5 w-5" />
+              <Bell className="h-5 w-5" aria-hidden="true" />
               <span className="absolute top-1 right-1 h-2 w-2 bg-cyan-500 rounded-full" />
             </button>
 
             {notifPanelOpen && (
-              <div className="absolute right-0 mt-3 w-80 bg-slate-900 border border-slate-800 rounded-2xl shadow-xl p-4 space-y-3 z-50">
+              <div className="absolute right-0 mt-3 w-80 bg-slate-900 border border-slate-800 rounded-2xl shadow-xl p-4 space-y-3 z-50" role="dialog" aria-label="Notifications panel">
                 <div className="flex justify-between items-center pb-2 border-b border-slate-800">
                   <span className="font-bold text-sm">Notifications</span>
                   <button 
@@ -129,15 +137,17 @@ export default function DashboardLayout() {
                     Clear all
                   </button>
                 </div>
-                <div className="space-y-3 text-xs leading-relaxed max-h-60 overflow-y-auto">
-                  <div className="p-2.5 bg-slate-950/60 rounded-lg border border-slate-800/40">
-                    <span className="font-semibold text-cyan-400 block mb-0.5">Welcome to EduSync AI</span>
-                    The school management ERP portal is ready for your deployment.
-                  </div>
-                  <div className="p-2.5 bg-slate-950/60 rounded-lg border border-slate-800/40">
-                    <span className="font-semibold text-amber-400 block mb-0.5">Midterm Exam Grades</span>
-                    Grades compilation for Grade 10 organic chemistry has been published.
-                  </div>
+                <div className="space-y-3 text-xs leading-relaxed max-h-60 overflow-y-auto" role="log" aria-live="polite">
+                  {notifications.length === 0 ? (
+                    <div className="p-2.5 text-slate-500 text-center italic">No new notifications.</div>
+                  ) : (
+                    notifications.map((n, i) => (
+                      <div key={i} className="p-2.5 bg-slate-950/60 rounded-lg border border-slate-800/40">
+                        <span className={`font-semibold block mb-0.5 ${n.type === 'info' ? 'text-cyan-400' : 'text-amber-400'}`}>{n.title}</span>
+                        {n.message}
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             )}
@@ -157,14 +167,14 @@ export default function DashboardLayout() {
       {/* Main Dashboard Layout */}
       <div className="flex flex-1 relative">
         {/* Sidebar Container (Responsive) */}
-        <aside className={`w-64 bg-slate-900/40 border-r border-slate-800 p-6 space-y-8 flex flex-col justify-between transition-all shrink-0 z-30
+        <aside aria-label="Main navigation" className={`w-64 bg-slate-900/40 border-r border-slate-800 p-6 space-y-8 flex flex-col justify-between transition-all shrink-0 z-30
           fixed md:sticky top-16 bottom-0 left-0 md:h-[calc(100vh-64px)] bg-slate-900 md:bg-slate-900/40
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}
         >
           <div className="space-y-6">
             <div className="space-y-1">
               <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2 px-3">Navigation Menu</span>
-              <nav className="space-y-1">
+              <nav className="space-y-1" aria-label="Page navigation">
                 {navItems.map((item, idx) => {
                   const isActive = location.pathname === item.path;
                   return (
@@ -204,6 +214,7 @@ export default function DashboardLayout() {
           <div 
             onClick={() => setSidebarOpen(false)} 
             className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-20 md:hidden"
+            aria-hidden="true"
           />
         )}
 
