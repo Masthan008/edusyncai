@@ -110,3 +110,25 @@ export const paymentRecordSchema = z.object({
     transaction_reference: z.string().optional(),
   }),
 });
+
+export const subjectCreateSchema = z.object({
+  body: z.object({
+    name: z.string().min(1, 'Subject name is required'),
+    code: z.string().min(1, 'Subject code is required'),
+    department_id: z.string().uuid('Invalid department UUID'),
+    credits: z.number().min(1).optional().default(3),
+  }),
+});
+
+export const registerSchema = z.object({
+  body: z.object({
+    email: z.string().email('Invalid email address'),
+    password: z.string().min(6, 'Password must be at least 6 characters long'),
+    role: z.enum(['Admin', 'Teacher', 'Student', 'Parent', 'Accountant']),
+    first_name: z.string().min(1, 'First name is required'),
+    last_name: z.string().min(1, 'Last name is required'),
+    phone: z.string().optional().or(z.literal('')),
+  }),
+});
+
+

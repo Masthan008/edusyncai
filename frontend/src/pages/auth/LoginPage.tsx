@@ -33,19 +33,7 @@ export default function LoginPage() {
     }
   };
 
-  const setShortcut = (roleEmail: string, rolePass: string) => {
-    setEmail(roleEmail);
-    setPassword(rolePass);
-  };
 
-  const shortcuts = [
-    { label: 'Admin', email: 'admin@edusync.com', pass: 'admin123', bg: 'bg-indigo-950/60 border-indigo-700/40 text-indigo-400' },
-    { label: 'HOD', email: 'hod@edusync.com', pass: 'hod123', bg: 'bg-emerald-950/60 border-emerald-700/40 text-emerald-400' },
-    { label: 'Teacher', email: 'teacher@edusync.com', pass: 'teacher123', bg: 'bg-amber-950/60 border-amber-700/40 text-amber-400' },
-    { label: 'Student', email: 'student@edusync.com', pass: 'student123', bg: 'bg-cyan-950/60 border-cyan-700/40 text-cyan-400' },
-    { label: 'Parent', email: 'parent@edusync.com', pass: 'parent123', bg: 'bg-rose-950/60 border-rose-700/40 text-rose-400' },
-    { label: 'Accountant', email: 'accountant@edusync.com', pass: 'accountant123', bg: 'bg-violet-950/60 border-violet-700/40 text-violet-400' },
-  ];
 
   return (
     <div className="min-h-screen bg-slate-950 text-white flex flex-col justify-center items-center px-4 relative overflow-hidden font-sans">
@@ -125,29 +113,21 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Role shortcut helper */}
-          <div className="pt-4 border-t border-slate-800/60">
-            <div className="flex items-center gap-1 text-slate-400 text-xs font-bold uppercase tracking-wider mb-3">
-              <Sparkles className="h-3.5 w-3.5 text-cyan-400" />
-              <span>Demo Role Shortcuts (One-Click)</span>
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              {shortcuts.map((sh, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setShortcut(sh.email, sh.pass)}
-                  className={`text-[10px] font-extrabold py-2 px-1.5 rounded-lg border text-center transition hover:brightness-110 active:scale-95 outline-none ${sh.bg}`}
-                >
-                  {sh.label}
-                </button>
-              ))}
+          {/* Signup redirect & seed admin credentials */}
+          <div className="pt-4 border-t border-slate-800/60 text-center space-y-4">
+            <p className="text-slate-400 text-xs">
+              New to EduSync?{' '}
+              <Link to="/register" className="text-cyan-400 hover:underline font-bold">
+                Create an account
+              </Link>
+            </p>
+            <div className="p-3 bg-slate-950/60 border border-slate-800/50 rounded-2xl text-[10px] text-slate-500 text-left space-y-1">
+              <span className="font-bold text-slate-400 block mb-0.5">ℹ️ Default Admin Credentials:</span>
+              <p>Email: <span className="font-mono text-cyan-400">admin@edusync.com</span></p>
+              <p>Password: <span className="font-mono text-cyan-400">admin123</span></p>
             </div>
           </div>
         </div>
-
-        <p className="text-center text-slate-500 text-xs">
-          Forgot credentials? Contact school registrar office for temporary pin.
-        </p>
       </div>
     </div>
   );

@@ -3,15 +3,20 @@ import { api } from '../../../utils/api.js';
 import { 
   Users, BookOpen, Landmark, Building, Calendar, ArrowRight,
   TrendingUp, Activity, Plus, Search, Filter, AlertCircle, Trash2, 
-  CalendarDays, ShieldCheck, CheckCircle2, CreditCard, Clock, Award
+  CalendarDays, ShieldCheck, CheckCircle2, CreditCard, Clock, Award, BookCopy
 } from 'lucide-react';
 import { 
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, 
   PieChart, Pie, Cell, BarChart, Bar, Legend
 } from 'recharts';
+import { useAuthStore } from '../../../store/authStore.js';
 
 export default function AdminDashboard() {
+  const { user } = useAuthStore();
+  const userRole = user?.role;
+
   const [activeTab, setActiveTab] = useState<'overview' | 'students' | 'teachers' | 'departments' | 'timetables' | 'billing'>('overview');
+
   
   // States for API data
   const [overview, setOverview] = useState<any>(null);
@@ -60,6 +65,11 @@ export default function AdminDashboard() {
   // Fee Form
   const [feeForm, setFeeForm] = useState({
     name: '', class_id: '', amount: '', due_date: '2026-07-01', academic_year_id: 'ay-1'
+  });
+
+  // Subject Form
+  const [subForm, setSubForm] = useState({
+    name: '', code: '', department_id: '', credits: '3'
   });
 
   useEffect(() => {
@@ -257,6 +267,29 @@ export default function AdminDashboard() {
       setFeeForm({ name: '', class_id: '', amount: '', due_date: '2026-07-01', academic_year_id: 'ay-1' });
     } catch (err: any) {
       setErrorMsg(err.response?.data?.message || 'Failed to create fee structure.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Subject creation
+  const handleCreateSubject = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setErrorMsg(null);
+    setSuccessMsg(null);
+
+    try {
+      await api.post('/school/subjects', {
+        ...subForm,
+        credits: parseInt(subForm.credits, 10) || 3
+      });
+      setSuccessMsg('Subject declared successfully.');
+      const res = await api.get('/school/subjects');
+      setSubjects(res.data.data);
+      setSubForm({ name: '', code: '', department_id: '', credits: '3' });
+    } catch (err: any) {
+      setErrorMsg(err.response?.data?.message || 'Failed to create subject.');
     } finally {
       setLoading(false);
     }
@@ -725,12 +758,14 @@ export default function AdminDashboard() {
                         </span>
                       </td>
                       <td className="py-3 text-right">
-                        <button 
-                          onClick={() => handleDeleteStudent(std.id)}
-                          className="p-1 text-slate-500 hover:text-rose-400 hover:bg-slate-800 rounded-lg transition"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                        {userRole !== 'HOD' && (
+                          <button 
+                            onClick={() => handleDeleteStudent(std.id)}
+                            className="p-1 text-slate-500 hover:text-rose-400 hover:bg-slate-800 rounded-lg transition"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -750,90 +785,100 @@ export default function AdminDashboard() {
       {activeTab === 'teachers' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
           {/* Create Teacher Form */}
-          <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-3xl space-y-4">
-            <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
-              <Plus className="h-5 w-5 text-cyan-400" />
-              <h2 className="text-lg font-bold">Register Faculty</h2>
-            </div>
+          {userRole !== 'HOD' ? (
+            <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-3xl space-y-4">
+              <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
+                <Plus className="h-5 w-5 text-cyan-400" />
+                <h2 className="text-lg font-bold">Register Faculty</h2>
+              </div>
 
-            <form onSubmit={handleTeacherRegistration} className="space-y-3.5 text-xs">
-              <div className="grid grid-cols-2 gap-3">
+              <form onSubmit={handleTeacherRegistration} className="space-y-3.5 text-xs">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-slate-400 font-semibold block mb-1">First Name</label>
+                    <input
+                      type="text" required
+                      value={teaForm.first_name}
+                      onChange={(e) => setTeaForm({ ...teaForm, first_name: e.target.value })}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 outline-none focus:border-cyan-500 text-xs"
+                      placeholder="Sarah"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-slate-400 font-semibold block mb-1">Last Name</label>
+                    <input
+                      type="text" required
+                      value={teaForm.last_name}
+                      onChange={(e) => setTeaForm({ ...teaForm, last_name: e.target.value })}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 outline-none focus:border-cyan-500 text-xs"
+                      placeholder="Connor"
+                    />
+                  </div>
+                </div>
+
                 <div>
-                  <label className="text-slate-400 font-semibold block mb-1">First Name</label>
+                  <label className="text-slate-400 font-semibold block mb-1">Faculty Email</label>
                   <input
-                    type="text" required
-                    value={teaForm.first_name}
-                    onChange={(e) => setTeaForm({ ...teaForm, first_name: e.target.value })}
+                    type="email" required
+                    value={teaForm.email}
+                    onChange={(e) => setTeaForm({ ...teaForm, email: e.target.value })}
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 outline-none focus:border-cyan-500 text-xs"
-                    placeholder="Sarah"
+                    placeholder="teacher@school.com"
                   />
                 </div>
+
                 <div>
-                  <label className="text-slate-400 font-semibold block mb-1">Last Name</label>
+                  <label className="text-slate-400 font-semibold block mb-1">Phone Number</label>
                   <input
-                    type="text" required
-                    value={teaForm.last_name}
-                    onChange={(e) => setTeaForm({ ...teaForm, last_name: e.target.value })}
+                    type="text"
+                    value={teaForm.phone}
+                    onChange={(e) => setTeaForm({ ...teaForm, phone: e.target.value })}
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 outline-none focus:border-cyan-500 text-xs"
-                    placeholder="Connor"
+                    placeholder="+1 (555) 019-2834"
                   />
                 </div>
-              </div>
 
-              <div>
-                <label className="text-slate-400 font-semibold block mb-1">Faculty Email</label>
-                <input
-                  type="email" required
-                  value={teaForm.email}
-                  onChange={(e) => setTeaForm({ ...teaForm, email: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 outline-none focus:border-cyan-500 text-xs"
-                  placeholder="teacher@school.com"
-                />
-              </div>
+                <div>
+                  <label className="text-slate-400 font-semibold block mb-1">Department assignment</label>
+                  <select
+                    value={teaForm.department_id}
+                    onChange={(e) => setTeaForm({ ...teaForm, department_id: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 outline-none text-xs"
+                  >
+                    <option value="">Unassigned</option>
+                    {departments.map(d => <option key={d.id} value={d.id}>{d.name} ({d.code})</option>)}
+                  </select>
+                </div>
 
-              <div>
-                <label className="text-slate-400 font-semibold block mb-1">Phone Number</label>
-                <input
-                  type="text"
-                  value={teaForm.phone}
-                  onChange={(e) => setTeaForm({ ...teaForm, phone: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 outline-none focus:border-cyan-500 text-xs"
-                  placeholder="+1 (555) 019-2834"
-                />
-              </div>
+                <div>
+                  <label className="text-slate-400 font-semibold block mb-1">Qualification</label>
+                  <input
+                    type="text"
+                    value={teaForm.qualification}
+                    onChange={(e) => setTeaForm({ ...teaForm, qualification: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 outline-none focus:border-cyan-500 text-xs"
+                    placeholder="Ph.D. in CS, M.Sc. Chemistry"
+                  />
+                </div>
 
-              <div>
-                <label className="text-slate-400 font-semibold block mb-1">Department assignment</label>
-                <select
-                  value={teaForm.department_id}
-                  onChange={(e) => setTeaForm({ ...teaForm, department_id: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 outline-none text-xs"
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold py-2.5 rounded-xl transition text-xs shadow-md"
                 >
-                  <option value="">Unassigned</option>
-                  {departments.map(d => <option key={d.id} value={d.id}>{d.name} ({d.code})</option>)}
-                </select>
-              </div>
-
-              <div>
-                <label className="text-slate-400 font-semibold block mb-1">Qualification</label>
-                <input
-                  type="text"
-                  value={teaForm.qualification}
-                  onChange={(e) => setTeaForm({ ...teaForm, qualification: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 outline-none focus:border-cyan-500 text-xs"
-                  placeholder="Ph.D. in CS, M.Sc. Chemistry"
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold py-2.5 rounded-xl transition text-xs shadow-md"
-              >
-                {loading ? 'Registering...' : 'Register Teacher'}
-              </button>
-            </form>
-          </div>
+                  {loading ? 'Registering...' : 'Register Teacher'}
+                </button>
+              </form>
+            </div>
+          ) : (
+            <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-3xl space-y-4 text-center py-12 flex flex-col items-center justify-center">
+              <ShieldCheck className="h-12 w-12 text-slate-600 mb-3" />
+              <h3 className="font-bold text-slate-350 text-sm">Access Restricted</h3>
+              <p className="text-slate-500 text-[11px] mt-1 max-w-[200px] mx-auto leading-relaxed">
+                Faculty registration & staff assignment is restricted to Administrators and Principals.
+              </p>
+            </div>
+          )}
 
           {/* Teacher Directory List */}
           <div className="lg:col-span-2 bg-slate-900/60 border border-slate-800 p-6 rounded-3xl space-y-4">
@@ -895,12 +940,14 @@ export default function AdminDashboard() {
                         </span>
                       </td>
                       <td className="py-3 text-right">
-                        <button 
-                          onClick={() => handleDeleteTeacher(t.id)}
-                          className="p-1 text-slate-500 hover:text-rose-400 hover:bg-slate-800 rounded-lg transition"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                        {userRole !== 'HOD' && (
+                          <button 
+                            onClick={() => handleDeleteTeacher(t.id)}
+                            className="p-1 text-slate-500 hover:text-rose-400 hover:bg-slate-800 rounded-lg transition"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -918,98 +965,224 @@ export default function AdminDashboard() {
 
       {/* TAB CONTENT: DEPARTMENTS */}
       {activeTab === 'departments' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-          {/* Create Dept Form */}
-          <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-3xl space-y-4">
-            <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
-              <Plus className="h-5 w-5 text-cyan-400" />
-              <h2 className="text-lg font-bold">Create Department</h2>
+        <div className="space-y-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+            {/* Create Dept Form */}
+            {userRole !== 'HOD' ? (
+              <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-3xl space-y-4">
+                <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
+                  <Plus className="h-5 w-5 text-cyan-400" />
+                  <h2 className="text-lg font-bold">Create Department</h2>
+                </div>
+
+                <form onSubmit={handleCreateDept} className="space-y-3.5 text-xs">
+                  <div>
+                    <label className="text-slate-400 font-semibold block mb-1">Department Name</label>
+                    <input
+                      type="text" required
+                      value={deptForm.name}
+                      onChange={(e) => setDeptForm({ ...deptForm, name: e.target.value })}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 outline-none focus:border-cyan-500 text-xs"
+                      placeholder="e.g. Life Sciences"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-slate-400 font-semibold block mb-1">Department Code</label>
+                    <input
+                      type="text" required
+                      value={deptForm.code}
+                      onChange={(e) => setDeptForm({ ...deptForm, code: e.target.value })}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 outline-none focus:border-cyan-500 text-xs"
+                      placeholder="e.g. LSCI"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-slate-400 font-semibold block mb-1">Assign HOD Faculty (Optional)</label>
+                    <select
+                      value={deptForm.hod_id}
+                      onChange={(e) => setDeptForm({ ...deptForm, hod_id: e.target.value })}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 outline-none text-xs"
+                    >
+                      <option value="">Select HOD</option>
+                      {teachers.map(t => <option key={t.id} value={t.id}>{t.first_name} {t.last_name}</option>)}
+                    </select>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold py-2.5 rounded-xl transition text-xs shadow-md"
+                  >
+                    {loading ? 'Creating...' : 'Create Wing'}
+                  </button>
+                </form>
+              </div>
+            ) : (
+              <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-3xl space-y-4 text-center py-12 flex flex-col items-center justify-center">
+                <ShieldCheck className="h-12 w-12 text-slate-600 mb-3" />
+                <h3 className="font-bold text-slate-350 text-sm">Access Restricted</h3>
+                <p className="text-slate-500 text-[11px] mt-1 max-w-[200px] mx-auto leading-relaxed">
+                  Department configuration and wing adjustments are restricted to Administrators and Principals.
+                </p>
+              </div>
+            )}
+
+            {/* Department List & HOD Allocations */}
+            <div className="lg:col-span-2 bg-slate-900/60 border border-slate-800 p-6 rounded-3xl space-y-4">
+              <h2 className="text-lg font-bold border-b border-slate-800 pb-3">Departments wing statistics</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {departments.map((dept) => (
+                  <div key={dept.id} className="p-5 bg-slate-950/40 border border-slate-800 rounded-2xl flex flex-col justify-between gap-4">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="font-extrabold text-slate-200 text-sm">{dept.name}</h3>
+                        <span className="text-[10px] font-mono font-bold text-cyan-400 bg-cyan-950 border border-cyan-800 px-1.5 py-0.5 rounded uppercase mt-1 inline-block">Code: {dept.code}</span>
+                      </div>
+                      {userRole !== 'HOD' && (
+                        <button 
+                          onClick={() => handleDeleteDept(dept.id)}
+                          className="text-slate-600 hover:text-rose-400 transition"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2 text-center text-[10px] text-slate-400">
+                      <div className="bg-slate-900 border border-slate-800 p-2 rounded-lg">
+                        <span className="block font-black text-slate-200 text-xs">{dept.faculty_count}</span>
+                        <span>Faculty</span>
+                      </div>
+                      <div className="bg-slate-900 border border-slate-800 p-2 rounded-lg">
+                        <span className="block font-black text-slate-200 text-xs">{dept.student_count}</span>
+                        <span>Students</span>
+                      </div>
+                      <div className="bg-slate-900 border border-slate-800 p-2 rounded-lg">
+                        <span className="block font-black text-slate-200 text-xs">{dept.subjects_count}</span>
+                        <span>Subjects</span>
+                      </div>
+                    </div>
+
+                    <div className="text-[10px] border-t border-slate-850 pt-2 text-slate-500">
+                      HOD: <span className="font-bold text-slate-400">{dept.hod_name || 'Unassigned'}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-
-            <form onSubmit={handleCreateDept} className="space-y-3.5 text-xs">
-              <div>
-                <label className="text-slate-400 font-semibold block mb-1">Department Name</label>
-                <input
-                  type="text" required
-                  value={deptForm.name}
-                  onChange={(e) => setDeptForm({ ...deptForm, name: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 outline-none focus:border-cyan-500 text-xs"
-                  placeholder="e.g. Life Sciences"
-                />
-              </div>
-
-              <div>
-                <label className="text-slate-400 font-semibold block mb-1">Department Code</label>
-                <input
-                  type="text" required
-                  value={deptForm.code}
-                  onChange={(e) => setDeptForm({ ...deptForm, code: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 outline-none focus:border-cyan-500 text-xs"
-                  placeholder="e.g. LSCI"
-                />
-              </div>
-
-              <div>
-                <label className="text-slate-400 font-semibold block mb-1">Assign HOD Faculty (Optional)</label>
-                <select
-                  value={deptForm.hod_id}
-                  onChange={(e) => setDeptForm({ ...deptForm, hod_id: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 outline-none text-xs"
-                >
-                  <option value="">Select HOD</option>
-                  {teachers.map(t => <option key={t.id} value={t.id}>{t.first_name} {t.last_name}</option>)}
-                </select>
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold py-2.5 rounded-xl transition text-xs shadow-md"
-              >
-                {loading ? 'Creating...' : 'Create Wing'}
-              </button>
-            </form>
           </div>
 
-          {/* Department List & HOD Allocations */}
-          <div className="lg:col-span-2 bg-slate-900/60 border border-slate-800 p-6 rounded-3xl space-y-4">
-            <h2 className="text-lg font-bold border-b border-slate-800 pb-3">Departments wing statistics</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {departments.map((dept) => (
-                <div key={dept.id} className="p-5 bg-slate-950/40 border border-slate-800 rounded-2xl flex flex-col justify-between gap-4">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="font-extrabold text-slate-200 text-sm">{dept.name}</h3>
-                      <span className="text-[10px] font-mono font-bold text-cyan-400 bg-cyan-950 border border-cyan-800 px-1.5 py-0.5 rounded uppercase mt-1 inline-block">Code: {dept.code}</span>
-                    </div>
-                    <button 
-                      onClick={() => handleDeleteDept(dept.id)}
-                      className="text-slate-600 hover:text-rose-400 transition"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-2 text-center text-[10px] text-slate-400">
-                    <div className="bg-slate-900 border border-slate-800 p-2 rounded-lg">
-                      <span className="block font-black text-slate-200 text-xs">{dept.faculty_count}</span>
-                      <span>Faculty</span>
-                    </div>
-                    <div className="bg-slate-900 border border-slate-800 p-2 rounded-lg">
-                      <span className="block font-black text-slate-200 text-xs">{dept.student_count}</span>
-                      <span>Students</span>
-                    </div>
-                    <div className="bg-slate-900 border border-slate-800 p-2 rounded-lg">
-                      <span className="block font-black text-slate-200 text-xs">{dept.subjects_count}</span>
-                      <span>Subjects</span>
-                    </div>
-                  </div>
-
-                  <div className="text-[10px] border-t border-slate-850 pt-2 text-slate-500">
-                    HOD: <span className="font-bold text-slate-400">{dept.hod_name || 'Unassigned'}</span>
-                  </div>
+          {/* Subjects Management Section */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start border-t border-slate-800/60 pt-8">
+            {/* Create Subject Form */}
+            {userRole !== 'HOD' ? (
+              <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-3xl space-y-4">
+                <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
+                  <Plus className="h-5 w-5 text-cyan-400" />
+                  <h2 className="text-lg font-bold">Declare New Subject</h2>
                 </div>
-              ))}
+
+                <form onSubmit={handleCreateSubject} className="space-y-3.5 text-xs">
+                  <div>
+                    <label className="text-slate-400 font-semibold block mb-1">Subject Name</label>
+                    <input
+                      type="text" required
+                      value={subForm.name}
+                      onChange={(e) => setSubForm({ ...subForm, name: e.target.value })}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 outline-none focus:border-cyan-500 text-xs"
+                      placeholder="e.g. Inorganic Chemistry"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-slate-400 font-semibold block mb-1">Subject Code</label>
+                    <input
+                      type="text" required
+                      value={subForm.code}
+                      onChange={(e) => setSubForm({ ...subForm, code: e.target.value })}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 outline-none focus:border-cyan-500 text-xs"
+                      placeholder="e.g. CHEM-301"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-slate-400 font-semibold block mb-1">Department Scope</label>
+                    <select
+                      required
+                      value={subForm.department_id}
+                      onChange={(e) => setSubForm({ ...subForm, department_id: e.target.value })}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 outline-none text-xs"
+                    >
+                      <option value="">Select Department</option>
+                      {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-slate-400 font-semibold block mb-1">Credits</label>
+                    <input
+                      type="number" required min="1" max="10"
+                      value={subForm.credits}
+                      onChange={(e) => setSubForm({ ...subForm, credits: e.target.value })}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 outline-none focus:border-cyan-500 text-xs"
+                      placeholder="3"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold py-2.5 rounded-xl transition text-xs shadow-md"
+                  >
+                    {loading ? 'Creating...' : 'Declare Subject'}
+                  </button>
+                </form>
+              </div>
+            ) : (
+              <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-3xl space-y-4 text-center py-12 flex flex-col items-center justify-center">
+                <ShieldCheck className="h-12 w-12 text-slate-600 mb-3" />
+                <h3 className="font-bold text-slate-350 text-sm">Access Restricted</h3>
+                <p className="text-slate-500 text-[11px] mt-1 max-w-[200px] mx-auto leading-relaxed">
+                  Declaring new academic subjects is restricted to Administrators and Principals.
+                </p>
+              </div>
+            )}
+
+            {/* Subject List */}
+            <div className="lg:col-span-2 bg-slate-900/60 border border-slate-800 p-6 rounded-3xl space-y-4">
+              <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
+                <BookCopy className="h-5 w-5 text-cyan-400" />
+                <h2 className="text-lg font-bold">Academic Subjects Catalog</h2>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-slate-800/80 text-slate-500">
+                      <th className="py-3 font-semibold">Subject Name</th>
+                      <th className="py-3 font-semibold">Code</th>
+                      <th className="py-3 font-semibold">Credits</th>
+                      <th className="py-3 font-semibold">Department</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/40 text-slate-200">
+                    {subjects.map((sub) => (
+                      <tr key={sub.id} className="hover:bg-slate-850/30">
+                        <td className="py-3 font-bold">{sub.name}</td>
+                        <td className="py-3 font-mono text-cyan-400">{sub.code}</td>
+                        <td className="py-3">{sub.credits} cr</td>
+                        <td className="py-3 text-slate-400">{sub.department_name || 'N/A'}</td>
+                      </tr>
+                    ))}
+                    {subjects.length === 0 && (
+                      <tr>
+                        <td colSpan={4} className="text-center py-8 text-slate-500">No subjects declared yet.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>

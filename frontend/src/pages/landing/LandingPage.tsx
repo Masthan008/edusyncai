@@ -131,8 +131,8 @@ export default function LandingPage() {
         </div>
         <div className="flex items-center gap-6">
           <Link to="/login" className="text-sm font-medium text-slate-300 hover:text-white transition">Sign In</Link>
-          <Link to="/login" className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-sm font-semibold px-4 py-2 rounded-lg transition flex items-center gap-1 shadow-lg shadow-cyan-500/10">
-            Deploy Portal <ArrowRight className="h-4 w-4" />
+          <Link to="/register" className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-sm font-semibold px-4 py-2 rounded-lg transition flex items-center gap-1 shadow-lg shadow-cyan-500/10">
+            Create Account <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
       </header>
@@ -155,7 +155,7 @@ export default function LandingPage() {
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 mb-20 w-full justify-center px-4 max-w-md">
-          <Link to="/login" className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-8 py-4 rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/20 text-base">
+          <Link to="/register" className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-8 py-4 rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/20 text-base">
             Start ERP Portal <ArrowRight className="h-5 w-5" />
           </Link>
           <a href="#features" className="bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 font-bold px-8 py-4 rounded-xl transition flex items-center justify-center gap-2 text-base">
@@ -337,10 +337,10 @@ export default function LandingPage() {
               </div>
               <div className="mt-8">
                 <Link 
-                  to="/login" 
+                  to="/register" 
                   className={`w-full py-3 px-4 rounded-xl font-bold text-center block text-sm transition ${tier.popular ? 'bg-cyan-500 hover:bg-cyan-400 text-slate-950' : 'bg-slate-900 hover:bg-slate-800 border border-slate-700'}`}
                 >
-                  Launch Live Portal
+                  Create Portal Account
                 </Link>
               </div>
             </div>
@@ -391,8 +391,8 @@ export default function LandingPage() {
             Register your institution details to receive immediate portal deployment tokens. Switch your registrar off spreadsheet files today.
           </p>
           <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
-            <Link to="/login" className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-8 py-4 rounded-xl transition flex items-center gap-2 shadow-lg shadow-cyan-500/20 text-base w-full sm:w-auto">
-              Launch Portal Demo <ArrowRight className="h-5 w-5" />
+            <Link to="/register" className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-8 py-4 rounded-xl transition flex items-center gap-2 shadow-lg shadow-cyan-500/20 text-base w-full sm:w-auto">
+              Get Started Instantly <ArrowRight className="h-5 w-5" />
             </Link>
             <a href="mailto:support@edusync.com" className="bg-slate-800 hover:bg-slate-700 border border-slate-750 text-white font-semibold px-8 py-4 rounded-xl transition w-full sm:w-auto">
               Contact Support

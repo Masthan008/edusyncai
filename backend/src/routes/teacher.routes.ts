@@ -9,5 +9,5 @@ export const teacherRouter = Router();
 teacherRouter.get('/', authenticateToken, getTeachers);
 teacherRouter.get('/:id', authenticateToken, getTeacherById);
 teacherRouter.post('/', authenticateToken, authorizeRoles('Admin', 'Principal'), validate(teacherCreateSchema), createTeacher);
-teacherRouter.put('/:id', authenticateToken, authorizeRoles('Admin', 'Principal', 'HOD'), updateTeacher);
+teacherRouter.put('/:id', authenticateToken, authorizeRoles('Admin', 'Principal'), updateTeacher);
 teacherRouter.delete('/:id', authenticateToken, authorizeRoles('Admin', 'Principal'), deleteTeacher);

@@ -154,3 +154,59 @@ export const getProfile = async (req: AuthenticatedRequest, res: Response, next:
     next(error);
   }
 };
+
+export const register = async (req: Request, res: Response, next: NextFunction) => {
+  const { email, password, role, first_name, last_name, phone } = req.body;
+
+  try {
+    // 1. Check if email is already taken
+    const existingUser = await query('SELECT id FROM users WHERE email = $1', [email]);
+    if (existingUser.rowCount > 0) {
+      return res.status(400).json({ success: false, message: 'Email is already registered.' });
+    }
+
+    // 2. Fetch role ID
+    const roleRes = await query('SELECT id FROM roles WHERE name = $1', [role]);
+    if (roleRes.rowCount === 0) {
+      return res.status(400).json({ success: false, message: `Role '${role}' does not exist.` });
+    }
+    const roleId = roleRes.rows[0].id;
+
+    // 3. Hash password
+    const passwordHash = bcrypt.hashSync(password, 10);
+
+    // 4. Create User
+    const userInsert = await query(
+      'INSERT INTO users (email, password_hash, role_id) VALUES ($1, $2, $3) RETURNING id',
+      [email, passwordHash, roleId]
+    );
+    const userId = userInsert.rows[0].id;
+
+    // 5. Create Profile according to role
+    if (role === 'Teacher') {
+      await query(
+        'INSERT INTO teachers (id, first_name, last_name, phone) VALUES ($1, $2, $3)',
+        [userId, first_name, last_name, phone || null]
+      );
+    } else if (role === 'Student') {
+      const admissionNum = `ADM-${Date.now().toString().slice(-6)}`;
+      await query(
+        'INSERT INTO students (id, first_name, last_name, admission_number, dob) VALUES ($1, $2, $3, $4, $5)',
+        [userId, first_name, last_name, admissionNum, '2000-01-01']
+      );
+    } else if (role === 'Parent') {
+      await query(
+        'INSERT INTO parents (id, first_name, last_name, phone) VALUES ($1, $2, $3)',
+        [userId, first_name, last_name, phone || '000-000-0000']
+      );
+    }
+
+    return res.status(201).json({
+      success: true,
+      message: 'Account registered successfully. You can now log in.',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+

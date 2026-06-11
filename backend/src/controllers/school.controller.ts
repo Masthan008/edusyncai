@@ -41,3 +41,22 @@ export const getAcademicYears = async (req: Request, res: Response, next: NextFu
     next(error);
   }
 };
+
+export const createSubject = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { name, code, department_id, credits } = req.body;
+    const result = await query(
+      `INSERT INTO subjects (name, code, department_id, credits) 
+       VALUES ($1, $2, $3, $4) 
+       RETURNING *`,
+      [name, code, department_id, credits || 3]
+    );
+    return res.status(201).json({ success: true, data: result.rows[0] });
+  } catch (error: any) {
+    if (error.code === '23505') {
+      return res.status(400).json({ success: false, message: 'Subject code must be unique.' });
+    }
+    next(error);
+  }
+};
+

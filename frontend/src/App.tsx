@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/authStore.js';
 import LandingPage from './pages/landing/LandingPage.js';
 import LoginPage from './pages/auth/LoginPage.js';
+import RegisterPage from './pages/auth/RegisterPage.js';
 import DashboardLayout from './pages/dashboard/DashboardLayout.js';
 import AdminDashboard from './pages/dashboard/admin/AdminDashboard.js';
 import TeacherDashboard from './pages/dashboard/teacher/TeacherDashboard.js';
@@ -49,6 +50,7 @@ export default function App() {
         
         {/* Portal Authentication */}
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
 
         {/* Private Dashboard Workspace */}
         <Route 

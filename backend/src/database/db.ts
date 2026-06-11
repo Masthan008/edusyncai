@@ -42,78 +42,27 @@ export const mockDb: any = {
   ],
   users: [
     { id: 'user-admin-1', email: 'admin@edusync.com', password_hash: hash('admin123'), role_id: 'role-admin-1111', is_active: true },
-    { id: 'user-principal-1', email: 'principal@edusync.com', password_hash: hash('principal123'), role_id: 'role-principal-2222', is_active: true },
-    { id: 'user-hod-1', email: 'hod@edusync.com', password_hash: hash('hod123'), role_id: 'role-hod-3333', is_active: true },
-    { id: 'user-teacher-1', email: 'teacher@edusync.com', password_hash: hash('teacher123'), role_id: 'role-teacher-4444', is_active: true },
-    { id: 'user-teacher-2', email: 'teacher2@edusync.com', password_hash: hash('teacher123'), role_id: 'role-teacher-4444', is_active: true },
-    { id: 'user-student-1', email: 'student@edusync.com', password_hash: hash('student123'), role_id: 'role-student-5555', is_active: true },
-    { id: 'user-student-2', email: 'student2@edusync.com', password_hash: hash('student123'), role_id: 'role-student-5555', is_active: true },
-    { id: 'user-parent-1', email: 'parent@edusync.com', password_hash: hash('parent123'), role_id: 'role-parent-6666', is_active: true },
-    { id: 'user-accountant-1', email: 'accountant@edusync.com', password_hash: hash('accountant123'), role_id: 'role-accountant-7777', is_active: true },
   ],
   academic_years: [
     { id: 'ay-1', name: '2025-2026', start_date: '2025-06-01', end_date: '2026-04-30', is_current: true },
   ],
-  departments: [
-    { id: 'dept-cs', name: 'Computer Science', code: 'CS', hod_id: 'user-teacher-1' },
-    { id: 'dept-sci', name: 'Natural Science', code: 'SCI', hod_id: 'user-teacher-2' },
-    { id: 'dept-math', name: 'Mathematics', code: 'MATH', hod_id: null },
-  ],
-  teachers: [
-    { id: 'user-teacher-1', first_name: 'Sarah', last_name: 'Connor', phone: '+1234567890', department_id: 'dept-cs', qualification: 'Ph.D. in Computer Science', joining_date: '2023-08-15', status: 'Active' },
-    { id: 'user-teacher-2', first_name: 'Walter', last_name: 'White', phone: '+1987654321', department_id: 'dept-sci', qualification: 'M.Sc. in Chemistry', joining_date: '2024-01-10', status: 'Active' },
-  ],
-  parents: [
-    { id: 'user-parent-1', first_name: 'John', last_name: 'Doe Senior', phone: '+1122334455', occupation: 'Software Engineer', address: '123 Main St, Seattle' },
-  ],
-  classes: [
-    { id: 'class-10', name: 'Grade 10', department_id: 'dept-sci' },
-    { id: 'class-11', name: 'Grade 11', department_id: 'dept-cs' },
-  ],
-  sections: [
-    { id: 'sect-10a', name: 'A', class_id: 'class-10', room_number: 'Room 301', advisor_id: 'user-teacher-2' },
-    { id: 'sect-11a', name: 'A', class_id: 'class-11', room_number: 'Lab 1', advisor_id: 'user-teacher-1' },
-  ],
-  students: [
-    { id: 'user-student-1', first_name: 'John', last_name: 'Doe', admission_number: 'ADM-2025-001', roll_number: '10', class_id: 'class-10', section_id: 'sect-10a', parent_id: 'user-parent-1', dob: '2010-05-15', gender: 'Male', address: '123 Main St, Seattle', admission_date: '2025-06-01', status: 'Active' },
-    { id: 'user-student-2', first_name: 'Jane', last_name: 'Smith', admission_number: 'ADM-2025-002', roll_number: '11', class_id: 'class-11', section_id: 'sect-11a', parent_id: null, dob: '2009-11-20', gender: 'Female', address: '456 Oak Ave, Boston', admission_date: '2025-06-01', status: 'Active' },
-  ],
-  subjects: [
-    { id: 'subj-cs1', name: 'Introduction to Computer Science', code: 'CS101', department_id: 'dept-cs', credits: 4 },
-    { id: 'subj-chem', name: 'Organic Chemistry', code: 'CHEM101', department_id: 'dept-sci', credits: 3 },
-  ],
-  attendance: [
-    { id: 'att-1', date: '2026-06-08', class_id: 'class-10', section_id: 'sect-10a', subject_id: 'subj-chem', taken_by: 'user-teacher-2' },
-  ],
-  attendance_records: [
-    { id: 'attr-1', attendance_id: 'att-1', student_id: 'user-student-1', status: 'Present', remarks: 'On time' },
-  ],
-  exams: [
-    { id: 'exam-1', name: 'Midterm Exam', class_id: 'class-10', academic_year_id: 'ay-1', start_date: '2026-10-10', end_date: '2026-10-15' },
-  ],
-  grades: [
-    { id: 'grade-1', exam_id: 'exam-1', student_id: 'user-student-1', subject_id: 'subj-chem', marks_obtained: 88.5, max_marks: 100, grade_point: 3.7, letter_grade: 'A', remarks: 'Excellent performance' },
-  ],
-  assignments: [
-    { id: 'assign-1', title: 'Chemical Reactions Report', description: 'Write a 2-page report on organic chemical reactions.', subject_id: 'subj-chem', class_id: 'class-10', section_id: 'sect-10a', teacher_id: 'user-teacher-2', due_date: '2026-06-15T23:59:59Z', max_marks: 50.0 },
-  ],
-  assignment_submissions: [
-    { id: 'sub-1', assignment_id: 'assign-1', student_id: 'user-student-1', submission_date: '2026-06-07T14:30:00Z', file_url: '/uploads/reactions_report.pdf', status: 'Submitted', marks_obtained: null, teacher_remarks: null, graded_by: null },
-  ],
-  fee_structures: [
-    { id: 'fee-1', name: 'Tuition Fee - Grade 10', class_id: 'class-10', amount: 1200.0, due_date: '2026-07-01', academic_year_id: 'ay-1' },
-    { id: 'fee-2', name: 'Tuition Fee - Grade 11', class_id: 'class-11', amount: 1400.0, due_date: '2026-07-01', academic_year_id: 'ay-1' },
-  ],
-  payments: [
-    { id: 'pay-1', student_id: 'user-student-1', fee_structure_id: 'fee-1', amount_paid: 1200.0, payment_date: '2026-06-05T09:00:00Z', payment_method: 'Card', transaction_reference: 'TXN-982348', status: 'Paid' },
-  ],
-  timetables: [
-    { id: 'tt-1', class_id: 'class-10', section_id: 'sect-10a', subject_id: 'subj-chem', teacher_id: 'user-teacher-2', day_of_week: 1, start_time: '09:00:00', end_time: '10:00:00', room: 'Room 301' },
-    { id: 'tt-2', class_id: 'class-10', section_id: 'sect-10a', subject_id: 'subj-cs1', teacher_id: 'user-teacher-1', day_of_week: 1, start_time: '10:15:00', end_time: '11:15:00', room: 'Lab 1' },
-  ],
-  notifications: [
-    { id: 'notif-1', user_id: null, title: 'Welcome to EduSync AI', message: 'The new ERP system is officially online.', type: 'success', is_read: false, created_at: new Date().toISOString() },
-  ],
+  departments: [],
+  teachers: [],
+  parents: [],
+  classes: [],
+  sections: [],
+  students: [],
+  subjects: [],
+  attendance: [],
+  attendance_records: [],
+  exams: [],
+  grades: [],
+  assignments: [],
+  assignment_submissions: [],
+  fee_structures: [],
+  payments: [],
+  timetables: [],
+  notifications: [],
 };
 
 // Generic query router for mock database (simulating PostgreSQL query responses)
@@ -209,8 +158,24 @@ export const query = async (text: string, params: any[] = []): Promise<{ rows: a
   }
 
   if (q.startsWith('INSERT INTO students')) {
-    const [id, first_name, last_name, admission_number, roll_number, class_id, section_id, parent_id, dob, gender, address] = params;
-    const newStudent = { id, first_name, last_name, admission_number, roll_number, class_id, section_id, parent_id, dob, gender, address, admission_date: new Date().toISOString().split('T')[0], status: 'Active' };
+    let id, first_name, last_name, admission_number, roll_number, class_id, section_id, parent_id, dob, gender, address;
+    if (params.length === 5) {
+      [id, first_name, last_name, admission_number, dob] = params;
+    } else {
+      [id, first_name, last_name, admission_number, roll_number, class_id, section_id, parent_id, dob, gender, address] = params;
+    }
+    const newStudent = { 
+      id, first_name, last_name, admission_number, 
+      roll_number: roll_number || null, 
+      class_id: class_id || null, 
+      section_id: section_id || null, 
+      parent_id: parent_id || null, 
+      dob: dob || '2000-01-01', 
+      gender: gender || null, 
+      address: address || null, 
+      admission_date: new Date().toISOString().split('T')[0], 
+      status: 'Active' 
+    };
     mockDb.students.push(newStudent);
     return { rows: [newStudent], rowCount: 1 };
   }
@@ -237,10 +202,29 @@ export const query = async (text: string, params: any[] = []): Promise<{ rows: a
   }
 
   if (q.startsWith('INSERT INTO teachers')) {
-    const [id, first_name, last_name, phone, department_id, qualification] = params;
-    const newTeacher = { id, first_name, last_name, phone, department_id, qualification, joining_date: new Date().toISOString().split('T')[0], status: 'Active' };
+    let id, first_name, last_name, phone, department_id, qualification;
+    if (params.length === 4) {
+      [id, first_name, last_name, phone] = params;
+    } else {
+      [id, first_name, last_name, phone, department_id, qualification] = params;
+    }
+    const newTeacher = { 
+      id, first_name, last_name, 
+      phone: phone || null, 
+      department_id: department_id || null, 
+      qualification: qualification || null, 
+      joining_date: new Date().toISOString().split('T')[0], 
+      status: 'Active' 
+    };
     mockDb.teachers.push(newTeacher);
     return { rows: [newTeacher], rowCount: 1 };
+  }
+
+  if (q.startsWith('INSERT INTO parents')) {
+    const [id, first_name, last_name, phone] = params;
+    const newParent = { id, first_name, last_name, phone, occupation: null, address: null };
+    mockDb.parents.push(newParent);
+    return { rows: [newParent], rowCount: 1 };
   }
 
   // 7. Departments
@@ -297,6 +281,26 @@ export const query = async (text: string, params: any[] = []): Promise<{ rows: a
     });
     return { rows: populated, rowCount: populated.length };
   }
+
+  if (q.startsWith('INSERT INTO subjects')) {
+    const [name, code, department_id, credits] = params;
+    const existing = mockDb.subjects.find((s: any) => s.code === code);
+    if (existing) {
+      const err = new Error('Subject code must be unique.') as any;
+      err.code = '23505';
+      throw err;
+    }
+    const newSubject = { 
+      id: `sub-${Date.now()}`, 
+      name, 
+      code, 
+      department_id, 
+      credits: credits || 3 
+    };
+    mockDb.subjects.push(newSubject);
+    return { rows: [newSubject], rowCount: 1 };
+  }
+
 
   // 10. Attendance & Attendance records
   if (q.includes('FROM attendance_records') || q.includes('FROM attendance')) {
