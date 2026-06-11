@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import { api } from '../../../utils/api.js';
 import {
   Users, BookOpen, Landmark, Building, Calendar, ArrowRight,
@@ -229,6 +230,7 @@ const DEFAULT_SUB_FORM: SubjectFormState = {
 function AdminDashboard() {
   const { user } = useAuthStore();
   const userRole = user?.role;
+  const location = useLocation();
 
   const [activeTab, setActiveTab] = useState<TabId>('overview');
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -265,6 +267,13 @@ function AdminDashboard() {
   const [ttForm, setTtForm] = useState<TimetableFormState>(DEFAULT_TT_FORM);
   const [feeForm, setFeeForm] = useState<FeeFormState>(DEFAULT_FEE_FORM);
   const [subForm, setSubForm] = useState<SubjectFormState>(DEFAULT_SUB_FORM);
+
+  const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+  const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
+  const [editingDepartment, setEditingDepartment] = useState<Department | null>(null);
+  const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
+  const [editingFee, setEditingFee] = useState<FeeStructure | null>(null);
+  const [editingTimetable, setEditingTimetable] = useState<Timetable | null>(null);
 
   // Confirmation dialog state
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -322,6 +331,12 @@ function AdminDashboard() {
     return () => controller.abort();
   }, [addNotification]);
 
+  useEffect(() => {
+    if (location.state?.tab) {
+      setActiveTab(location.state.tab as TabId);
+    }
+  }, [location.state?.tab]);
+
   const fetchClassTimetable = useCallback(async (classId: string, sectionId: string) => {
     try {
       const res = await api.get(`/timetables/class/${classId}/${sectionId}`);
@@ -336,79 +351,126 @@ function AdminDashboard() {
     setLoading(true);
 
     try {
-      await api.post('/students', stdForm);
-      addNotification('success', 'Student admitted successfully.');
+      if (editingStudent) {
+        const payload = { ...stdForm };
+        if (!payload.password) delete (payload as any).password;
+        await api.put(`/students/${editingStudent.id}`, payload);
+        addNotification('success', 'Student updated successfully.');
+      } else {
+        await api.post('/students', stdForm);
+        addNotification('success', 'Student admitted successfully.');
+      }
       const res = await api.get('/students');
       setStudents(res.data.data);
       const overviewRes = await api.get('/analytics/overview');
       setOverview(overviewRes.data.data);
       setStdForm(DEFAULT_STUDENT_FORM);
+      setEditingStudent(null);
     } catch (err: any) {
-      addNotification('error', err.response?.data?.message || 'Failed to admit student.');
+      addNotification('error', err.response?.data?.message || (editingStudent ? 'Failed to update student.' : 'Failed to admit student.'));
     } finally {
       setLoading(false);
     }
-  }, [stdForm, addNotification]);
+  }, [stdForm, editingStudent, addNotification]);
 
   const handleTeacherRegistration = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
+    const phonePattern = /^\d{10}$/;
+    if (teaForm.phone && !phonePattern.test(teaForm.phone)) {
+      addNotification('error', 'Phone must be exactly 10 digits.');
+      setLoading(false);
+      return;
+    }
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailPattern.test(teaForm.email)) {
+      addNotification('error', 'Please enter a valid email address.');
+      setLoading(false);
+      return;
+    }
+
     try {
-      await api.post('/teachers', teaForm);
-      addNotification('success', 'Teacher registered successfully.');
+      if (editingTeacher) {
+        const payload = { ...teaForm };
+        if (!payload.password) delete (payload as any).password;
+        await api.put(`/teachers/${editingTeacher.id}`, payload);
+        addNotification('success', 'Teacher updated successfully.');
+      } else {
+        await api.post('/teachers', teaForm);
+        addNotification('success', 'Teacher registered successfully.');
+      }
       const res = await api.get('/teachers');
       setTeachers(res.data.data);
       const overviewRes = await api.get('/analytics/overview');
       setOverview(overviewRes.data.data);
       setTeaForm(DEFAULT_TEACHER_FORM);
+      setEditingTeacher(null);
     } catch (err: any) {
-      addNotification('error', err.response?.data?.message || 'Failed to register teacher.');
+      addNotification('error', err.response?.data?.message || (editingTeacher ? 'Failed to update teacher.' : 'Failed to register teacher.'));
     } finally {
       setLoading(false);
     }
-  }, [teaForm, addNotification]);
+  }, [teaForm, editingTeacher, addNotification]);
 
   const handleCreateDept = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      await api.post('/departments', deptForm);
-      addNotification('success', 'Department created.');
+      if (editingDepartment) {
+        await api.put(`/departments/${editingDepartment.id}/hod`, { hod_id: deptForm.hod_id || null });
+        addNotification('success', 'Department HOD updated.');
+      } else {
+        await api.post('/departments', deptForm);
+        addNotification('success', 'Department created.');
+      }
       const res = await api.get('/departments');
       setDepartments(res.data.data);
       const overviewRes = await api.get('/analytics/overview');
       setOverview(overviewRes.data.data);
       setDeptForm(DEFAULT_DEPT_FORM);
+      setEditingDepartment(null);
     } catch (err: any) {
-      addNotification('error', err.response?.data?.message || 'Failed to create department.');
+      addNotification('error', err.response?.data?.message || (editingDepartment ? 'Failed to update department.' : 'Failed to create department.'));
     } finally {
       setLoading(false);
     }
-  }, [deptForm, addNotification]);
+  }, [deptForm, editingDepartment, addNotification]);
 
   const handleScheduleSlot = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      await api.post('/timetables', {
-        ...ttForm,
-        day_of_week: parseInt(ttForm.day_of_week, 10),
-        start_time: `${ttForm.start_time}:00`,
-        end_time: `${ttForm.end_time}:00`,
-      });
-      addNotification('success', 'Timetable slot scheduled.');
+      if (editingTimetable) {
+        await api.put(`/timetables/${editingTimetable.id}`, {
+          ...ttForm,
+          day_of_week: parseInt(ttForm.day_of_week, 10),
+          start_time: `${ttForm.start_time}:00`,
+          end_time: `${ttForm.end_time}:00`,
+        });
+        addNotification('success', 'Timetable slot updated.');
+      } else {
+        await api.post('/timetables', {
+          ...ttForm,
+          day_of_week: parseInt(ttForm.day_of_week, 10),
+          start_time: `${ttForm.start_time}:00`,
+          end_time: `${ttForm.end_time}:00`,
+        });
+        addNotification('success', 'Timetable slot scheduled.');
+      }
       if (ttForm.class_id && ttForm.section_id) {
         fetchClassTimetable(ttForm.class_id, ttForm.section_id);
       }
+      setTtForm(DEFAULT_TT_FORM);
+      setEditingTimetable(null);
     } catch (err: any) {
       addNotification('error', err.response?.data?.message || 'Conflict detected or slot scheduling failed.');
     } finally {
       setLoading(false);
     }
-  }, [ttForm, fetchClassTimetable, addNotification]);
+  }, [ttForm, editingTimetable, fetchClassTimetable, addNotification]);
 
   const handleCreateFee = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -416,43 +478,169 @@ function AdminDashboard() {
 
     try {
       const amountVal = feeForm.amount ? parseFloat(feeForm.amount) : 0;
-      await api.post('/payments/structures', {
-        name: feeForm.name,
-        class_id: feeForm.class_id || null,
-        amount: amountVal,
-        due_date: feeForm.due_date,
-        academic_year_id: 'ay-1',
-      });
-      addNotification('success', 'Fee structure declared.');
+      if (editingFee) {
+        await api.put(`/payments/structures/${editingFee.id}`, {
+          name: feeForm.name,
+          class_id: feeForm.class_id || null,
+          amount: amountVal,
+          due_date: feeForm.due_date,
+          academic_year_id: feeForm.academic_year_id || 'ay-1',
+        });
+        addNotification('success', 'Fee structure updated.');
+      } else {
+        await api.post('/payments/structures', {
+          name: feeForm.name,
+          class_id: feeForm.class_id || null,
+          amount: amountVal,
+          due_date: feeForm.due_date,
+          academic_year_id: 'ay-1',
+        });
+        addNotification('success', 'Fee structure declared.');
+      }
       const res = await api.get('/payments/structures');
       setFeeStructures(res.data.data);
       setFeeForm(DEFAULT_FEE_FORM);
+      setEditingFee(null);
     } catch (err: any) {
-      addNotification('error', err.response?.data?.message || 'Failed to create fee structure.');
+      addNotification('error', err.response?.data?.message || (editingFee ? 'Failed to update fee structure.' : 'Failed to create fee structure.'));
     } finally {
       setLoading(false);
     }
-  }, [feeForm, addNotification]);
+  }, [feeForm, editingFee, addNotification]);
 
   const handleCreateSubject = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      await api.post('/school/subjects', {
-        ...subForm,
-        credits: parseInt(subForm.credits, 10) || 3,
-      });
-      addNotification('success', 'Subject declared successfully.');
+      if (editingSubject) {
+        await api.put(`/school/subjects/${editingSubject.id}`, {
+          ...subForm,
+          credits: parseInt(subForm.credits, 10) || 3,
+        });
+        addNotification('success', 'Subject updated successfully.');
+      } else {
+        await api.post('/school/subjects', {
+          ...subForm,
+          credits: parseInt(subForm.credits, 10) || 3,
+        });
+        addNotification('success', 'Subject declared successfully.');
+      }
       const res = await api.get('/school/subjects');
       setSubjects(res.data.data);
       setSubForm(DEFAULT_SUB_FORM);
+      setEditingSubject(null);
     } catch (err: any) {
-      addNotification('error', err.response?.data?.message || 'Failed to create subject.');
+      addNotification('error', err.response?.data?.message || (editingSubject ? 'Failed to update subject.' : 'Failed to create subject.'));
     } finally {
       setLoading(false);
     }
-  }, [subForm, addNotification]);
+  }, [subForm, editingSubject, addNotification]);
+
+  const startEditStudent = useCallback((std: Student) => {
+    setEditingStudent(std);
+    setStdForm({
+      first_name: std.first_name,
+      last_name: std.last_name,
+      email: std.email,
+      password: '',
+      admission_number: std.admission_number,
+      roll_number: std.roll_number,
+      class_id: std.class_id,
+      section_id: std.section_id,
+      parent_email: std.parent_email || '',
+      dob: std.dob?.split('T')[0] || '2010-01-01',
+      gender: std.gender,
+      address: std.address || '',
+    });
+  }, []);
+
+  const cancelEditStudent = useCallback(() => {
+    setEditingStudent(null);
+    setStdForm(DEFAULT_STUDENT_FORM);
+  }, []);
+
+  const startEditTeacher = useCallback((t: Teacher) => {
+    setEditingTeacher(t);
+    setTeaForm({
+      first_name: t.first_name,
+      last_name: t.last_name,
+      email: t.email,
+      password: '',
+      phone: t.phone || '',
+      department_id: t.department_id,
+      qualification: t.qualification || '',
+    });
+  }, []);
+
+  const cancelEditTeacher = useCallback(() => {
+    setEditingTeacher(null);
+    setTeaForm(DEFAULT_TEACHER_FORM);
+  }, []);
+
+  const startEditDept = useCallback((dept: Department) => {
+    setEditingDepartment(dept);
+    setDeptForm({
+      name: dept.name,
+      code: dept.code,
+      hod_id: dept.hod_id || '',
+    });
+  }, []);
+
+  const cancelEditDept = useCallback(() => {
+    setEditingDepartment(null);
+    setDeptForm(DEFAULT_DEPT_FORM);
+  }, []);
+
+  const startEditSubject = useCallback((sub: Subject) => {
+    setEditingSubject(sub);
+    setSubForm({
+      name: sub.name,
+      code: sub.code,
+      department_id: sub.department_id,
+      credits: String(sub.credits),
+    });
+  }, []);
+
+  const cancelEditSubject = useCallback(() => {
+    setEditingSubject(null);
+    setSubForm(DEFAULT_SUB_FORM);
+  }, []);
+
+  const startEditFee = useCallback((fee: FeeStructure) => {
+    setEditingFee(fee);
+    setFeeForm({
+      name: fee.name,
+      class_id: fee.class_id || '',
+      amount: String(fee.amount),
+      due_date: fee.due_date?.split('T')[0] || '2026-07-01',
+      academic_year_id: fee.academic_year_id,
+    });
+  }, []);
+
+  const cancelEditFee = useCallback(() => {
+    setEditingFee(null);
+    setFeeForm(DEFAULT_FEE_FORM);
+  }, []);
+
+  const startEditTimetable = useCallback((slot: Timetable) => {
+    setEditingTimetable(slot);
+    setTtForm({
+      class_id: slot.class_id,
+      section_id: slot.section_id,
+      subject_id: slot.subject_id,
+      teacher_id: slot.teacher_id,
+      day_of_week: String(slot.day_of_week),
+      start_time: slot.start_time?.slice(0, 5) || '09:00',
+      end_time: slot.end_time?.slice(0, 5) || '10:00',
+      room: slot.room,
+    });
+  }, []);
+
+  const cancelEditTimetable = useCallback(() => {
+    setEditingTimetable(null);
+    setTtForm(DEFAULT_TT_FORM);
+  }, []);
 
   const handleDeleteStudent = useCallback(async (id: string) => {
     try {
@@ -647,7 +835,7 @@ function AdminDashboard() {
                 </div>
               </div>
               <div className="space-y-1">
-                <h3 className="text-4xl font-extrabold">${overview?.counters?.totalRevenue?.toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00'}</h3>
+                <h3 className="text-4xl font-extrabold">₹{overview?.counters?.totalRevenue?.toLocaleString('en-IN', { minimumFractionDigits: 2 }) || '0.00'}</h3>
                 <p className="text-[10px] text-slate-500">Collected tuition dues</p>
               </div>
             </div>
@@ -744,8 +932,12 @@ function AdminDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start" id="tabpanel-students" role="tabpanel" aria-label="Students">
           <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-3xl space-y-4">
             <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
-              <Plus className="h-5 w-5 text-cyan-400" />
-              <h2 className="text-lg font-bold font-sans">Admit New Student</h2>
+              {editingStudent ? (
+                <svg className="h-5 w-5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+              ) : (
+                <Plus className="h-5 w-5 text-cyan-400" />
+              )}
+              <h2 className="text-lg font-bold font-sans">{editingStudent ? `Edit Student: ${editingStudent.first_name} ${editingStudent.last_name}` : 'Admit New Student'}</h2>
             </div>
 
             <form onSubmit={handleStudentAdmission} className="space-y-3.5 text-xs">
@@ -892,13 +1084,24 @@ function AdminDashboard() {
                 />
               </div>
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold py-2.5 rounded-xl transition text-xs shadow-md"
-              >
-                {loading ? 'Admitting...' : 'Complete Admission'}
-              </button>
+              <div className="flex gap-2">
+                {editingStudent && (
+                  <button
+                    type="button"
+                    onClick={cancelEditStudent}
+                    className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-2.5 rounded-xl transition text-xs shadow-md"
+                  >
+                    Cancel
+                  </button>
+                )}
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className={`${editingStudent ? 'flex-1' : 'w-full'} bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold py-2.5 rounded-xl transition text-xs shadow-md`}
+                >
+                  {loading ? (editingStudent ? 'Updating...' : 'Admitting...') : (editingStudent ? 'Update Student' : 'Complete Admission')}
+                </button>
+              </div>
             </form>
           </div>
 
@@ -962,6 +1165,13 @@ function AdminDashboard() {
                         </span>
                       </td>
                       <td className="py-3 text-right">
+                        <button
+                          onClick={() => startEditStudent(std)}
+                          className="p-1 text-slate-500 hover:text-cyan-400 hover:bg-slate-800 rounded-lg transition mr-1"
+                          aria-label={`Edit student ${std.first_name} ${std.last_name}`}
+                        >
+                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                        </button>
                         {userRole !== 'HOD' && (
                           <button
                             onClick={() => requestDeleteConfirm(
@@ -995,8 +1205,12 @@ function AdminDashboard() {
           {userRole !== 'HOD' ? (
             <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-3xl space-y-4">
               <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
-                <Plus className="h-5 w-5 text-cyan-400" />
-                <h2 className="text-lg font-bold">Register Faculty</h2>
+                {editingTeacher ? (
+                  <svg className="h-5 w-5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                ) : (
+                  <Plus className="h-5 w-5 text-cyan-400" />
+                )}
+                <h2 className="text-lg font-bold">{editingTeacher ? `Edit Faculty: ${editingTeacher.first_name} ${editingTeacher.last_name}` : 'Register Faculty'}</h2>
               </div>
 
               <form onSubmit={handleTeacherRegistration} className="space-y-3.5 text-xs">
@@ -1074,13 +1288,24 @@ function AdminDashboard() {
                   />
                 </div>
 
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold py-2.5 rounded-xl transition text-xs shadow-md"
-                >
-                  {loading ? 'Registering...' : 'Register Teacher'}
-                </button>
+                <div className="flex gap-2">
+                  {editingTeacher && (
+                    <button
+                      type="button"
+                      onClick={cancelEditTeacher}
+                      className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-2.5 rounded-xl transition text-xs shadow-md"
+                    >
+                      Cancel
+                    </button>
+                  )}
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className={`${editingTeacher ? 'flex-1' : 'w-full'} bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold py-2.5 rounded-xl transition text-xs shadow-md`}
+                  >
+                    {loading ? (editingTeacher ? 'Updating...' : 'Registering...') : (editingTeacher ? 'Update Teacher' : 'Register Teacher')}
+                  </button>
+                </div>
               </form>
             </div>
           ) : (
@@ -1154,6 +1379,13 @@ function AdminDashboard() {
                         </span>
                       </td>
                       <td className="py-3 text-right">
+                        <button
+                          onClick={() => startEditTeacher(t)}
+                          className="p-1 text-slate-500 hover:text-cyan-400 hover:bg-slate-800 rounded-lg transition mr-1"
+                          aria-label={`Edit teacher ${t.first_name} ${t.last_name}`}
+                        >
+                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                        </button>
                         {userRole !== 'HOD' && (
                           <button
                             onClick={() => requestDeleteConfirm(
@@ -1188,8 +1420,12 @@ function AdminDashboard() {
             {userRole !== 'HOD' ? (
               <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-3xl space-y-4">
                 <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
-                  <Plus className="h-5 w-5 text-cyan-400" />
-                  <h2 className="text-lg font-bold">Create Department</h2>
+                  {editingDepartment ? (
+                    <svg className="h-5 w-5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                  ) : (
+                    <Plus className="h-5 w-5 text-cyan-400" />
+                  )}
+                  <h2 className="text-lg font-bold">{editingDepartment ? `Edit Department: ${editingDepartment.name}` : 'Create Department'}</h2>
                 </div>
 
                 <form onSubmit={handleCreateDept} className="space-y-3.5 text-xs">
@@ -1200,7 +1436,8 @@ function AdminDashboard() {
                       type="text" required
                       value={deptForm.name}
                       onChange={(e) => setDeptForm({ ...deptForm, name: e.target.value })}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 outline-none focus:border-cyan-500 text-xs"
+                      disabled={!!editingDepartment}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 outline-none focus:border-cyan-500 text-xs disabled:opacity-50 disabled:cursor-not-allowed"
                       placeholder="e.g. Life Sciences"
                     />
                   </div>
@@ -1212,7 +1449,8 @@ function AdminDashboard() {
                       type="text" required
                       value={deptForm.code}
                       onChange={(e) => setDeptForm({ ...deptForm, code: e.target.value })}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 outline-none focus:border-cyan-500 text-xs"
+                      disabled={!!editingDepartment}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 outline-none focus:border-cyan-500 text-xs disabled:opacity-50 disabled:cursor-not-allowed"
                       placeholder="e.g. LSCI"
                     />
                   </div>
@@ -1230,13 +1468,24 @@ function AdminDashboard() {
                     </select>
                   </div>
 
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold py-2.5 rounded-xl transition text-xs shadow-md"
-                  >
-                    {loading ? 'Creating...' : 'Create Wing'}
-                  </button>
+                  <div className="flex gap-2">
+                    {editingDepartment && (
+                      <button
+                        type="button"
+                        onClick={cancelEditDept}
+                        className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-2.5 rounded-xl transition text-xs shadow-md"
+                      >
+                        Cancel
+                      </button>
+                    )}
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className={`${editingDepartment ? 'flex-1' : 'w-full'} bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold py-2.5 rounded-xl transition text-xs shadow-md`}
+                    >
+                      {loading ? (editingDepartment ? 'Updating...' : 'Creating...') : (editingDepartment ? 'Update HOD' : 'Create Wing')}
+                    </button>
+                  </div>
                 </form>
               </div>
             ) : (
@@ -1259,6 +1508,13 @@ function AdminDashboard() {
                         <h3 className="font-extrabold text-slate-200 text-sm">{dept.name}</h3>
                         <span className="text-[10px] font-mono font-bold text-cyan-400 bg-cyan-950 border border-cyan-800 px-1.5 py-0.5 rounded uppercase mt-1 inline-block">Code: {dept.code}</span>
                       </div>
+                      <button
+                        onClick={() => startEditDept(dept)}
+                        className="text-slate-600 hover:text-cyan-400 transition mr-2"
+                        aria-label={`Edit department ${dept.name}`}
+                      >
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                      </button>
                       {userRole !== 'HOD' && (
                         <button
                           onClick={() => requestDeleteConfirm(
@@ -1301,8 +1557,12 @@ function AdminDashboard() {
             {userRole !== 'HOD' ? (
               <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-3xl space-y-4">
                 <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
-                  <Plus className="h-5 w-5 text-cyan-400" />
-                  <h2 className="text-lg font-bold">Declare New Subject</h2>
+                  {editingSubject ? (
+                    <svg className="h-5 w-5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                  ) : (
+                    <Plus className="h-5 w-5 text-cyan-400" />
+                  )}
+                  <h2 className="text-lg font-bold">{editingSubject ? `Edit Subject: ${editingSubject.name}` : 'Declare New Subject'}</h2>
                 </div>
 
                 <form onSubmit={handleCreateSubject} className="space-y-3.5 text-xs">
@@ -1356,13 +1616,24 @@ function AdminDashboard() {
                     />
                   </div>
 
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold py-2.5 rounded-xl transition text-xs shadow-md"
-                  >
-                    {loading ? 'Creating...' : 'Declare Subject'}
-                  </button>
+                  <div className="flex gap-2">
+                    {editingSubject && (
+                      <button
+                        type="button"
+                        onClick={cancelEditSubject}
+                        className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-2.5 rounded-xl transition text-xs shadow-md"
+                      >
+                        Cancel
+                      </button>
+                    )}
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className={`${editingSubject ? 'flex-1' : 'w-full'} bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold py-2.5 rounded-xl transition text-xs shadow-md`}
+                    >
+                      {loading ? (editingSubject ? 'Updating...' : 'Creating...') : (editingSubject ? 'Update Subject' : 'Declare Subject')}
+                    </button>
+                  </div>
                 </form>
               </div>
             ) : (
@@ -1381,31 +1652,41 @@ function AdminDashboard() {
                 <h2 className="text-lg font-bold">Academic Subjects Catalog</h2>
               </div>
               <div className="overflow-x-auto">
-                <table className="w-full text-xs text-left border-collapse">
-                  <thead>
-                    <tr className="border-b border-slate-800/80 text-slate-500">
-                      <th className="py-3 font-semibold">Subject Name</th>
-                      <th className="py-3 font-semibold">Code</th>
-                      <th className="py-3 font-semibold">Credits</th>
-                      <th className="py-3 font-semibold">Department</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/40 text-slate-200">
-                    {subjects.map((sub) => (
-                      <tr key={sub.id} className="hover:bg-slate-850/30">
-                        <td className="py-3 font-bold">{sub.name}</td>
-                        <td className="py-3 font-mono text-cyan-400">{sub.code}</td>
-                        <td className="py-3">{sub.credits} cr</td>
-                        <td className="py-3 text-slate-400">{sub.department_name || 'N/A'}</td>
+                  <table className="w-full text-xs text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-slate-800/80 text-slate-500">
+                        <th className="py-3 font-semibold">Subject Name</th>
+                        <th className="py-3 font-semibold">Code</th>
+                        <th className="py-3 font-semibold">Credits</th>
+                        <th className="py-3 font-semibold">Department</th>
+                        <th className="py-3 text-right">Actions</th>
                       </tr>
-                    ))}
-                    {subjects.length === 0 && (
-                      <tr>
-                        <td colSpan={4} className="text-center py-8 text-slate-500">No subjects declared yet.</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/40 text-slate-200">
+                      {subjects.map((sub) => (
+                        <tr key={sub.id} className="hover:bg-slate-850/30">
+                          <td className="py-3 font-bold">{sub.name}</td>
+                          <td className="py-3 font-mono text-cyan-400">{sub.code}</td>
+                          <td className="py-3">{sub.credits} cr</td>
+                          <td className="py-3 text-slate-400">{sub.department_name || 'N/A'}</td>
+                          <td className="py-3 text-right">
+                            <button
+                              onClick={() => startEditSubject(sub)}
+                              className="p-1 text-slate-500 hover:text-cyan-400 hover:bg-slate-800 rounded-lg transition"
+                              aria-label={`Edit subject ${sub.name}`}
+                            >
+                              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                      {subjects.length === 0 && (
+                        <tr>
+                          <td colSpan={5} className="text-center py-8 text-slate-500">No subjects declared yet.</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
               </div>
             </div>
           </div>
@@ -1415,10 +1696,14 @@ function AdminDashboard() {
       {/* TAB CONTENT: TIMETABLES */}
       {activeTab === 'timetables' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start" id="tabpanel-timetables" role="tabpanel" aria-label="Timetables">
-          <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-3xl space-y-4">
+            <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-3xl space-y-4">
             <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
-              <Plus className="h-5 w-5 text-cyan-400" />
-              <h2 className="text-lg font-bold">Schedule Period Slot</h2>
+              {editingTimetable ? (
+                <svg className="h-5 w-5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+              ) : (
+                <Plus className="h-5 w-5 text-cyan-400" />
+              )}
+              <h2 className="text-lg font-bold">{editingTimetable ? 'Edit Period Slot' : 'Schedule Period Slot'}</h2>
             </div>
 
             <form onSubmit={handleScheduleSlot} className="space-y-3.5 text-xs">
@@ -1531,13 +1816,24 @@ function AdminDashboard() {
                 />
               </div>
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold py-2.5 rounded-xl transition text-xs shadow-md"
-              >
-                {loading ? 'Scheduling...' : 'Schedule Period'}
-              </button>
+              <div className="flex gap-2">
+                {editingTimetable && (
+                  <button
+                    type="button"
+                    onClick={cancelEditTimetable}
+                    className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-2.5 rounded-xl transition text-xs shadow-md"
+                  >
+                    Cancel
+                  </button>
+                )}
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className={`${editingTimetable ? 'flex-1' : 'w-full'} bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold py-2.5 rounded-xl transition text-xs shadow-md`}
+                >
+                  {loading ? (editingTimetable ? 'Updating...' : 'Scheduling...') : (editingTimetable ? 'Update Slot' : 'Schedule Period')}
+                </button>
+              </div>
             </form>
           </div>
 
@@ -1565,7 +1861,14 @@ function AdminDashboard() {
                     <div className="w-24 font-extrabold text-slate-300 text-xs border-r border-slate-800 shrink-0 pr-2 uppercase tracking-wider">{dayName}</div>
                     <div className="flex flex-wrap gap-2 flex-1">
                       {slots.map((s: Timetable) => (
-                        <div key={s.id} className="bg-slate-900 border border-slate-800/80 px-3 py-2 rounded-xl text-left space-y-1 min-w-[140px]">
+                        <div key={s.id} className="bg-slate-900 border border-slate-800/80 px-3 py-2 rounded-xl text-left space-y-1 min-w-[140px] relative group">
+                          <button
+                            onClick={() => startEditTimetable(s)}
+                            className="absolute -top-1.5 -right-1.5 p-1 bg-slate-800 text-slate-400 hover:text-cyan-400 hover:bg-slate-700 rounded-full opacity-0 group-hover:opacity-100 transition text-[9px]"
+                            aria-label={`Edit timetable slot for ${s.subject_name}`}
+                          >
+                            <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                          </button>
                           <span className="font-bold text-slate-200 block text-xs truncate">{s.subject_name}</span>
                           <span className="text-[10px] text-cyan-400 font-medium block">Room: {s.room}</span>
                           <div className="flex justify-between text-[9px] text-slate-500 font-mono mt-1">
@@ -1589,8 +1892,12 @@ function AdminDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start" id="tabpanel-billing" role="tabpanel" aria-label="Billing">
           <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-3xl space-y-4">
             <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
-              <Plus className="h-5 w-5 text-cyan-400" />
-              <h2 className="text-lg font-bold">Declare Fee Structure</h2>
+              {editingFee ? (
+                <svg className="h-5 w-5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+              ) : (
+                <Plus className="h-5 w-5 text-cyan-400" />
+              )}
+              <h2 className="text-lg font-bold">{editingFee ? `Edit Fee: ${editingFee.name}` : 'Declare Fee Structure'}</h2>
             </div>
 
             <form onSubmit={handleCreateFee} className="space-y-3.5 text-xs">
@@ -1620,7 +1927,7 @@ function AdminDashboard() {
               </div>
 
               <div>
-                <label className="text-slate-400 font-semibold block mb-1" htmlFor="fee-amount">Dues Amount ($)</label>
+                <label className="text-slate-400 font-semibold block mb-1" htmlFor="fee-amount">Dues Amount (₹)</label>
                 <input
                   id="fee-amount"
                   type="number" required
@@ -1642,46 +1949,67 @@ function AdminDashboard() {
                 />
               </div>
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold py-2.5 rounded-xl transition text-xs shadow-md"
-              >
-                {loading ? 'Creating...' : 'Declare Fee'}
-              </button>
+              <div className="flex gap-2">
+                {editingFee && (
+                  <button
+                    type="button"
+                    onClick={cancelEditFee}
+                    className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-2.5 rounded-xl transition text-xs shadow-md"
+                  >
+                    Cancel
+                  </button>
+                )}
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className={`${editingFee ? 'flex-1' : 'w-full'} bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold py-2.5 rounded-xl transition text-xs shadow-md`}
+                >
+                  {loading ? (editingFee ? 'Updating...' : 'Creating...') : (editingFee ? 'Update Fee' : 'Declare Fee')}
+                </button>
+              </div>
             </form>
           </div>
 
           <div className="lg:col-span-2 bg-slate-900/60 border border-slate-800 p-6 rounded-3xl space-y-4">
             <h2 className="text-lg font-bold border-b border-slate-800 pb-3">Active Tuition Invoices & Fee Structures</h2>
             <div className="overflow-x-auto">
-              <table className="w-full text-xs text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-slate-800/80 text-slate-500">
-                    <th className="py-3 font-semibold">Structure Name</th>
-                    <th className="py-3 font-semibold">Grade Scope</th>
-                    <th className="py-3 font-semibold">Dues Amount</th>
-                    <th className="py-3 font-semibold">Due Date</th>
-                    <th className="py-3 font-semibold">Period</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/40">
-                  {feeStructures.map((f) => (
-                    <tr key={f.id} className="hover:bg-slate-850/30">
-                      <td className="py-3 font-bold text-slate-200">{f.name}</td>
-                      <td className="py-3">{f.class_name || 'All Classes'}</td>
-                      <td className="py-3 font-mono font-bold text-cyan-400">${(f.amount ? parseFloat(String(f.amount)) : 0).toFixed(2)}</td>
-                      <td className="py-3 font-mono">{f.due_date.split('T')[0]}</td>
-                      <td className="py-3 text-slate-400">{f.academic_year_name}</td>
-                    </tr>
-                  ))}
-                  {feeStructures.length === 0 && (
-                    <tr>
-                      <td colSpan={5} className="text-center py-8 text-slate-500">No fee structures declared yet.</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                  <table className="w-full text-xs text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-slate-800/80 text-slate-500">
+                        <th className="py-3 font-semibold">Structure Name</th>
+                        <th className="py-3 font-semibold">Grade Scope</th>
+                        <th className="py-3 font-semibold">Dues Amount</th>
+                        <th className="py-3 font-semibold">Due Date</th>
+                        <th className="py-3 font-semibold">Period</th>
+                        <th className="py-3 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/40">
+                      {feeStructures.map((f) => (
+                        <tr key={f.id} className="hover:bg-slate-850/30">
+                          <td className="py-3 font-bold text-slate-200">{f.name}</td>
+                          <td className="py-3">{f.class_name || 'All Classes'}</td>
+                          <td className="py-3 font-mono font-bold text-cyan-400">${(f.amount ? parseFloat(String(f.amount)) : 0).toFixed(2)}</td>
+                          <td className="py-3 font-mono">{f.due_date.split('T')[0]}</td>
+                          <td className="py-3 text-slate-400">{f.academic_year_name}</td>
+                          <td className="py-3 text-right">
+                            <button
+                              onClick={() => startEditFee(f)}
+                              className="p-1 text-slate-500 hover:text-cyan-400 hover:bg-slate-800 rounded-lg transition"
+                              aria-label={`Edit fee structure ${f.name}`}
+                            >
+                              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                      {feeStructures.length === 0 && (
+                        <tr>
+                          <td colSpan={6} className="text-center py-8 text-slate-500">No fee structures declared yet.</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
             </div>
           </div>
         </div>

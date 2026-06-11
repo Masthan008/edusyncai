@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import { api } from '../../../utils/api.js';
 import { 
   Landmark, CreditCard, ClipboardList, Plus, 
@@ -46,6 +47,7 @@ interface TabDef {
 }
 
 export default function AccountantDashboard() {
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState<TabId>('collect');
 
   // Loaded stats
@@ -59,6 +61,8 @@ export default function AccountantDashboard() {
   const [amountPaid, setAmountPaid] = useState('');
   const [payMethod, setPayMethod] = useState('Card');
   const [txnRef, setTxnRef] = useState('');
+  const [accountNumber, setAccountNumber] = useState('');
+  const [chequeNumber, setChequeNumber] = useState('');
 
   // Alerts
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -115,6 +119,12 @@ export default function AccountantDashboard() {
     return () => controller.abort();
   }, [fetchSummary, fetchStructures, fetchStudents]);
 
+  useEffect(() => {
+    if (location.state?.tab) {
+      setActiveTab(location.state.tab as TabId);
+    }
+  }, [location.state?.tab]);
+
   // Record a payment manual entry
   const handleRecordPayment = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -130,15 +140,20 @@ export default function AccountantDashboard() {
         fee_structure_id: selectedFee,
         amount_paid: parseFloat(amountPaid),
         payment_method: payMethod,
-        transaction_reference: txnRef || `TXN-MAN-${Date.now()}`
+        transaction_reference: txnRef || `TXN-MAN-${Date.now()}`,
+        ...(payMethod === 'BankTransfer' ? { account_number: accountNumber } : {}),
+        ...(payMethod === 'ChequeDD' ? { cheque_number: chequeNumber } : {}),
       });
 
       setSuccessMsg('Offline payment checkout recorded successfully in ledger.');
       fetchSummary();
+      fetchStructures();
       setSelectedStudent('');
       setSelectedFee('');
       setAmountPaid('');
       setTxnRef('');
+      setAccountNumber('');
+      setChequeNumber('');
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to record payment in database ledger.';
       setErrorMsg(msg);
@@ -153,8 +168,46 @@ export default function AccountantDashboard() {
     { id: 'structures', label: 'Fee Catalog', icon: <ClipboardList className="h-4 w-4" /> },
   ], []);
 
-  const handleReceiptDownload = useCallback((txRef: string) => {
-    setSuccessMsg(`Simulated receipt PDF download generated for reference: ${txRef}`);
+  const handleReceiptDownload = useCallback((tx: Transaction) => {
+    const receiptWindow = window.open('', '_blank');
+    if (!receiptWindow) return;
+    receiptWindow.document.write(`
+      <html><head><title>Receipt - ${tx.transaction_reference}</title>
+      <style>
+        body { font-family: 'Courier New', monospace; padding: 40px; color: #1e293b; }
+        .header { text-align: center; border-bottom: 2px solid #06b6d4; padding-bottom: 20px; margin-bottom: 20px; }
+        .header h1 { color: #06b6d4; margin: 0; font-size: 24px; }
+        .header p { color: #64748b; margin: 4px 0 0; font-size: 12px; }
+        table { width: 100%; border-collapse: collapse; }
+        td { padding: 8px 4px; font-size: 13px; }
+        .label { color: #64748b; font-weight: 600; width: 140px; }
+        .value { font-weight: 700; }
+        .amount-row { background: #f1f5f9; border-radius: 8px; }
+        .amount-row td { padding: 16px 8px; font-size: 18px; }
+        .amount-row .value { color: #06b6d4; font-size: 22px; text-align: right; }
+        .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px dashed #cbd5e1; font-size: 10px; color: #94a3b8; }
+      </style></head><body>
+        <div class="header">
+          <h1>EduSync AI — Official Receipt</h1>
+          <p>Payment Confirmation Voucher</p>
+        </div>
+        <table>
+          <tr><td class="label">Reference ID</td><td class="value">${tx.transaction_reference}</td></tr>
+          <tr><td class="label">Student Name</td><td class="value">${tx.student_name}</td></tr>
+          <tr><td class="label">Fee Item</td><td class="value">${tx.fee_name || 'School Fee'}</td></tr>
+          <tr><td class="label">Payment Date</td><td class="value">${tx.payment_date.split('T')[0]}</td></tr>
+          <tr><td class="label">Payment Method</td><td class="value">${tx.payment_method}</td></tr>
+        </table>
+        <table style="margin-top: 16px;">
+          <tr class="amount-row"><td class="label">Amount Paid</td><td class="value">₹${parseFloat(String(tx.amount_paid)).toFixed(2)}</td></tr>
+        </table>
+        <div class="footer">
+          Thank you for your payment. For inquiries, contact finance@edusync.com<br/>
+          This is a computer-generated receipt.
+        </div>
+      </body></html>
+    `);
+    receiptWindow.document.close();
   }, []);
 
   return (
@@ -209,8 +262,8 @@ export default function AccountantDashboard() {
         <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-3xl flex justify-between items-center shadow-lg">
           <div>
             <span className="text-slate-500 text-[10px] font-bold uppercase tracking-wider block">Total College Revenue</span>
-            <span className="text-3xl font-black text-emerald-400 mt-1 block" aria-label={`Total revenue $${summary?.totalRevenue?.toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00'}`}>
-              ${summary?.totalRevenue?.toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00'}
+            <span className="text-3xl font-black text-emerald-400 mt-1 block" aria-label={`Total revenue ₹${summary?.totalRevenue?.toLocaleString('en-IN', { minimumFractionDigits: 2 }) || '0.00'}`}>
+              ₹{summary?.totalRevenue?.toLocaleString('en-IN', { minimumFractionDigits: 2 }) || '0.00'}
             </span>
           </div>
           <div className="h-10 w-10 bg-slate-850 rounded-xl border border-slate-800 flex items-center justify-center text-cyan-400 shrink-0" aria-hidden="true">
@@ -266,13 +319,13 @@ export default function AccountantDashboard() {
                 aria-label="Select fee structure"
               >
                 <option value="">Select Dues Category</option>
-                {feeStructures.map(f => <option key={f.id} value={f.id}>{f.name} (${parseFloat(String(f.amount)).toFixed(2)})</option>)}
+                {feeStructures.map(f => <option key={f.id} value={f.id}>{f.name} (₹{parseFloat(String(f.amount)).toFixed(2)})</option>)}
               </select>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="text-slate-400 block mb-1" htmlFor="amount-paid">Amount Collected ($)</label>
+                <label className="text-slate-400 block mb-1" htmlFor="amount-paid">Amount Collected (₹)</label>
                 <input
                   id="amount-paid"
                   type="number" required min={1} step="0.01"
@@ -280,7 +333,7 @@ export default function AccountantDashboard() {
                   onChange={(e) => setAmountPaid(e.target.value)}
                   placeholder="e.g. 1200.00"
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 outline-none focus:border-cyan-500 text-slate-200 text-xs font-mono font-bold"
-                  aria-label="Amount collected in dollars"
+                  aria-label="Amount collected in rupees"
                 />
               </div>
 
@@ -289,16 +342,51 @@ export default function AccountantDashboard() {
                 <select
                   id="payment-method"
                   value={payMethod}
-                  onChange={(e) => setPayMethod(e.target.value)}
+                  onChange={(e) => {
+                    setPayMethod(e.target.value);
+                    setAccountNumber('');
+                    setChequeNumber('');
+                  }}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 outline-none text-slate-200 text-xs font-bold"
                   aria-label="Select payment method"
                 >
                   <option value="Card">Online Credit Card</option>
                   <option value="Cash">Cash Draft Receipt</option>
-                  <option value="BankTransfer">Direct Bank Check</option>
+                  <option value="BankTransfer">Direct Bank Transfer</option>
+                  <option value="ChequeDD">Cheque / DD</option>
                 </select>
               </div>
             </div>
+
+            {payMethod === 'BankTransfer' && (
+              <div>
+                <label className="text-slate-400 block mb-1" htmlFor="account-number">Bank Account Number</label>
+                <input
+                  id="account-number"
+                  type="text" required
+                  value={accountNumber}
+                  onChange={(e) => setAccountNumber(e.target.value)}
+                  placeholder="e.g. 1234567890"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 outline-none focus:border-cyan-500 text-slate-200 text-xs font-mono"
+                  aria-label="Bank account number"
+                />
+              </div>
+            )}
+
+            {payMethod === 'ChequeDD' && (
+              <div>
+                <label className="text-slate-400 block mb-1" htmlFor="cheque-number">Cheque / DD Number</label>
+                <input
+                  id="cheque-number"
+                  type="text" required
+                  value={chequeNumber}
+                  onChange={(e) => setChequeNumber(e.target.value)}
+                  placeholder="e.g. CHQ-0042891"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 outline-none focus:border-cyan-500 text-slate-200 text-xs font-mono"
+                  aria-label="Cheque or DD number"
+                />
+              </div>
+            )}
 
             <div>
               <label className="text-slate-400 block mb-1" htmlFor="txn-ref">Bank Check/Txn Ref No. (Optional)</label>
@@ -366,10 +454,10 @@ export default function AccountantDashboard() {
                         {tx.payment_method}
                       </span>
                     </td>
-                    <td className="py-3 font-mono font-bold text-emerald-400">${parseFloat(String(tx.amount_paid)).toFixed(2)}</td>
+                    <td className="py-3 font-mono font-bold text-emerald-400">₹{parseFloat(String(tx.amount_paid)).toFixed(2)}</td>
                     <td className="py-3 text-right">
                       <button 
-                        onClick={() => handleReceiptDownload(tx.transaction_reference)}
+                        onClick={() => handleReceiptDownload(tx)}
                         className="p-1 hover:bg-slate-800 rounded-lg transition text-slate-400 hover:text-cyan-400"
                         aria-label={`Download receipt for transaction ${tx.transaction_reference}`}
                       >
@@ -410,7 +498,7 @@ export default function AccountantDashboard() {
                   <tr key={f.id} className="hover:bg-slate-850/30">
                     <td className="py-3 font-bold text-slate-200">{f.name}</td>
                     <td className="py-3">{f.class_name || 'All Classes'}</td>
-                    <td className="py-3 font-mono font-bold text-cyan-400">${parseFloat(String(f.amount)).toFixed(2)}</td>
+                    <td className="py-3 font-mono font-bold text-cyan-400">₹{parseFloat(String(f.amount)).toFixed(2)}</td>
                     <td className="py-3 font-mono">{f.due_date.split('T')[0]}</td>
                     <td className="py-3 text-slate-400">{f.academic_year_name}</td>
                   </tr>

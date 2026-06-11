@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import { api } from '../../../utils/api.js';
 import { useAuthStore } from '../../../store/authStore.js';
 import { 
@@ -77,6 +78,7 @@ interface ChatMessage {
 const DEFAULT_SUBMISSION_URL_PREFIX = 'http://school-storage.internal/uploads/';
 
 export default function StudentDashboard() {
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState<'overview' | 'grades' | 'schedule' | 'assignments'>('overview');
   const { profile } = useAuthStore();
 
@@ -212,6 +214,12 @@ export default function StudentDashboard() {
       controller.abort();
     };
   }, [profile, fetchAttendance, fetchReportCard, fetchSchedule, fetchAssignments, fetchAiInsights]);
+
+  useEffect(() => {
+    if (location.state?.tab) {
+      setActiveTab(location.state.tab as 'overview' | 'grades' | 'schedule' | 'assignments');
+    }
+  }, [location.state?.tab]);
 
   // Submit Homework Roster
   const handleHomeworkSubmit = useCallback(async (e: React.FormEvent) => {

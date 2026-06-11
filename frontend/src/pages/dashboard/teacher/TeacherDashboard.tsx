@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import { api } from '../../../utils/api.js';
 import { useAuthStore } from '../../../store/authStore.js';
 import { 
@@ -79,6 +80,7 @@ interface GradeRecord {
 }
 
 export default function TeacherDashboard() {
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState<'attendance' | 'grades' | 'assignments' | 'schedule'>('attendance');
   const { profile } = useAuthStore();
 
@@ -135,6 +137,12 @@ export default function TeacherDashboard() {
     fetchAssignments();
     return () => ac.abort();
   }, []);
+
+  useEffect(() => {
+    if (location.state?.tab) {
+      setActiveTab(location.state.tab as 'attendance' | 'grades' | 'assignments' | 'schedule');
+    }
+  }, [location.state?.tab]);
 
   // Fetch student lists when class/section matches
   useEffect(() => {
@@ -287,6 +295,13 @@ export default function TeacherDashboard() {
     setErrorMsg(null);
     setSuccessMsg(null);
 
+    const dueDateObj = new Date(assignForm.due_date);
+    if (isNaN(dueDateObj.getTime())) {
+      setErrorMsg('Invalid due date. Please select a valid date and time.');
+      setLoading(false);
+      return;
+    }
+
     try {
       await api.post('/assignments', {
         title: assignForm.title,
@@ -294,7 +309,7 @@ export default function TeacherDashboard() {
         subject_id: selectedSubject,
         class_id: selectedClass,
         section_id: selectedSection,
-        due_date: new Date(assignForm.due_date).toISOString(),
+        due_date: dueDateObj.toISOString(),
         max_marks: parseFloat(assignForm.max_marks)
       });
       setSuccessMsg('Homework assignment published successfully.');

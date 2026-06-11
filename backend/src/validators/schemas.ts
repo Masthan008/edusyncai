@@ -45,7 +45,7 @@ export const teacherCreateSchema = z.object({
     last_name: z.string().min(1, 'Last name is required'),
     email: z.string().email('Invalid email address'),
     password: z.string().min(6, 'Password must be at least 6 characters'),
-    phone: z.string().optional(),
+    phone: z.string().max(10, 'Phone must be 10 digits').regex(/^\d{10}$/, 'Phone must be 10 digits').optional(),
     department_id: idString.optional(),
     qualification: z.string().optional(),
   }),
@@ -141,6 +141,8 @@ export const paymentRecordSchema = z.object({
     amount_paid: z.number().positive('Amount must be positive'),
     payment_method: z.string().min(1, 'Payment method is required'),
     transaction_reference: z.string().optional(),
+    account_number: z.string().optional(),
+    cheque_number: z.string().optional(),
   }),
 });
 

@@ -61,11 +61,7 @@ export default function App() {
             </ProtectedRoute>
           }
         >
-          {/* Default index path automatically dispatches by active user role */}
           <Route index element={<DashboardDispatcher />} />
-          
-          {/* Sub-routing configuration fallback */}
-          <Route path="*" element={<DashboardDispatcher />} />
         </Route>
 
         {/* Catch-all global redirects */}

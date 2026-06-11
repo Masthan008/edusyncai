@@ -40,7 +40,7 @@ export const createFeeStructure = async (req: Request, res: Response, next: Next
 };
 
 export const recordPayment = async (req: Request, res: Response, next: NextFunction) => {
-  const { student_id, fee_structure_id, amount_paid, payment_method, transaction_reference } = req.body;
+  const { student_id, fee_structure_id, amount_paid, payment_method, transaction_reference, account_number, cheque_number } = req.body;
   const reference = transaction_reference || `TXN-${Date.now()}`;
 
   try {
@@ -50,9 +50,9 @@ export const recordPayment = async (req: Request, res: Response, next: NextFunct
     }
 
     const payRes = await query(
-      `INSERT INTO payments (student_id, fee_structure_id, amount_paid, payment_method, transaction_reference, status) 
-       VALUES ($1, $2, $3, $4, $5, 'Paid') RETURNING *`,
-      [student_id, fee_structure_id, amount_paid, payment_method, reference]
+      `INSERT INTO payments (student_id, fee_structure_id, amount_paid, payment_method, transaction_reference, account_number, cheque_number, status) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 'Paid') RETURNING *`,
+      [student_id, fee_structure_id, amount_paid, payment_method, reference, account_number || null, cheque_number || null]
     );
 
     return res.status(201).json({
@@ -118,6 +118,30 @@ export const getStudentPayments = async (req: Request, res: Response, next: Next
         history: paymentsRes.rows,
       },
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateFeeStructure = async (req: Request, res: Response, next: NextFunction) => {
+  const { id } = req.params;
+  const { name, class_id, amount, due_date } = req.body;
+
+  try {
+    const checkRes = await query('SELECT id FROM fee_structures WHERE id = $1', [id]);
+    if (checkRes.rowCount === 0) {
+      return res.status(404).json({ success: false, message: 'Fee structure not found.' });
+    }
+
+    const result = await query(
+      `UPDATE fee_structures 
+       SET name = COALESCE($1, name), class_id = COALESCE($2, class_id),
+           amount = COALESCE($3, amount), due_date = COALESCE($4, due_date)
+       WHERE id = $5 RETURNING *`,
+      [name, class_id, amount, due_date, id]
+    );
+
+    return res.status(200).json({ success: true, message: 'Fee structure updated.', data: result.rows[0] });
   } catch (error) {
     next(error);
   }

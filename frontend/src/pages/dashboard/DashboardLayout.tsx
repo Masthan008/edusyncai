@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore.js';
 import { 
   GraduationCap, LayoutDashboard, Users, BookOpen, Clock, 
@@ -25,57 +25,57 @@ export default function DashboardLayout() {
 
   const getNavigationForRole = (role: string) => {
     const common = [
-      { path: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="h-5 w-5" /> },
+      { tab: null, label: 'Dashboard', icon: <LayoutDashboard className="h-5 w-5" /> },
     ];
 
     switch (role) {
       case 'Admin':
         return [
           ...common,
-          { path: '/dashboard/students', label: 'Students Directory', icon: <Users className="h-5 w-5" /> },
-          { path: '/dashboard/teachers', label: 'Faculty Directory', icon: <BookOpen className="h-5 w-5" /> },
-          { path: '/dashboard/departments', label: 'Departments', icon: <Building className="h-5 w-5" /> },
-          { path: '/dashboard/attendance', label: 'Attendance logs', icon: <CheckSquare className="h-5 w-5" /> },
-          { path: '/dashboard/timetable', label: 'Timetables', icon: <Clock className="h-5 w-5" /> },
-          { path: '/dashboard/exams', label: 'Grades & Exams', icon: <Award className="h-5 w-5" /> },
-          { path: '/dashboard/payments', label: 'Fee ledger', icon: <Landmark className="h-5 w-5" /> },
+          { tab: 'students', label: 'Students Directory', icon: <Users className="h-5 w-5" /> },
+          { tab: 'teachers', label: 'Faculty Directory', icon: <BookOpen className="h-5 w-5" /> },
+          { tab: 'departments', label: 'Departments', icon: <Building className="h-5 w-5" /> },
+          { tab: 'attendance', label: 'Attendance logs', icon: <CheckSquare className="h-5 w-5" /> },
+          { tab: 'timetables', label: 'Timetables', icon: <Clock className="h-5 w-5" /> },
+          { tab: 'exams', label: 'Grades & Exams', icon: <Award className="h-5 w-5" /> },
+          { tab: 'billing', label: 'Fee ledger', icon: <Landmark className="h-5 w-5" /> },
         ];
       case 'Principal':
       case 'HOD':
         return [
           ...common,
-          { path: '/dashboard/teachers', label: 'Faculty Workload', icon: <BookOpen className="h-5 w-5" /> },
-          { path: '/dashboard/departments', label: 'Departments', icon: <Building className="h-5 w-5" /> },
-          { path: '/dashboard/timetable', label: 'Timetable Scheduling', icon: <Clock className="h-5 w-5" /> },
-          { path: '/dashboard/exams', label: 'Performance Review', icon: <Award className="h-5 w-5" /> },
+          { tab: 'teachers', label: 'Faculty Workload', icon: <BookOpen className="h-5 w-5" /> },
+          { tab: 'departments', label: 'Departments', icon: <Building className="h-5 w-5" /> },
+          { tab: 'timetables', label: 'Timetable Scheduling', icon: <Clock className="h-5 w-5" /> },
+          { tab: 'exams', label: 'Performance Review', icon: <Award className="h-5 w-5" /> },
         ];
       case 'Teacher':
         return [
           ...common,
-          { path: '/dashboard/attendance', label: 'Record Attendance', icon: <CheckSquare className="h-5 w-5" /> },
-          { path: '/dashboard/exams', label: 'Enter Grades', icon: <Award className="h-5 w-5" /> },
-          { path: '/dashboard/assignments', label: 'Homework Review', icon: <BookOpen className="h-5 w-5" /> },
-          { path: '/dashboard/timetable', label: 'My Schedule', icon: <CalendarDays className="h-5 w-5" /> },
+          { tab: 'attendance', label: 'Record Attendance', icon: <CheckSquare className="h-5 w-5" /> },
+          { tab: 'grades', label: 'Enter Grades', icon: <Award className="h-5 w-5" /> },
+          { tab: 'assignments', label: 'Homework Review', icon: <BookOpen className="h-5 w-5" /> },
+          { tab: 'schedule', label: 'My Schedule', icon: <CalendarDays className="h-5 w-5" /> },
         ];
       case 'Student':
         return [
           ...common,
-          { path: '/dashboard/exams', label: 'My Report Card', icon: <Award className="h-5 w-5" /> },
-          { path: '/dashboard/assignments', label: 'Assignments', icon: <BookOpen className="h-5 w-5" /> },
-          { path: '/dashboard/timetable', label: 'Class Timetable', icon: <Clock className="h-5 w-5" /> },
+          { tab: 'grades', label: 'My Report Card', icon: <Award className="h-5 w-5" /> },
+          { tab: 'assignments', label: 'Assignments', icon: <BookOpen className="h-5 w-5" /> },
+          { tab: 'schedule', label: 'Class Timetable', icon: <Clock className="h-5 w-5" /> },
         ];
       case 'Parent':
         return [
           ...common,
-          { path: '/dashboard/payments', label: 'School Bills', icon: <Landmark className="h-5 w-5" /> },
-          { path: '/dashboard/exams', label: 'Performance', icon: <Award className="h-5 w-5" /> },
-          { path: '/dashboard/attendance', label: 'Attendance logs', icon: <CheckSquare className="h-5 w-5" /> },
+          { tab: 'payments', label: 'School Bills', icon: <Landmark className="h-5 w-5" /> },
+          { tab: 'exams', label: 'Performance', icon: <Award className="h-5 w-5" /> },
+          { tab: 'attendance', label: 'Attendance logs', icon: <CheckSquare className="h-5 w-5" /> },
         ];
       case 'Accountant':
         return [
           ...common,
-          { path: '/dashboard/payments', label: 'Fee Structures', icon: <Settings className="h-5 w-5" /> },
-          { path: '/dashboard/payments/ledger', label: 'Payments Ledger', icon: <Landmark className="h-5 w-5" /> },
+          { tab: 'structures', label: 'Fee Structures', icon: <Settings className="h-5 w-5" /> },
+          { tab: 'ledger', label: 'Payments Ledger', icon: <Landmark className="h-5 w-5" /> },
         ];
       default:
         return common;
@@ -176,13 +176,17 @@ export default function DashboardLayout() {
               <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2 px-3">Navigation Menu</span>
               <nav className="space-y-1" aria-label="Page navigation">
                 {navItems.map((item, idx) => {
-                  const isActive = location.pathname === item.path;
+                  const isActive = item.tab === null
+                    ? !location.state?.tab
+                    : location.state?.tab === item.tab;
                   return (
-                    <Link
+                    <button
                       key={idx}
-                      to={item.path}
-                      onClick={() => setSidebarOpen(false)}
-                      className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition ${
+                      onClick={() => {
+                        navigate('/dashboard', { state: { tab: item.tab } });
+                        setSidebarOpen(false);
+                      }}
+                      className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition w-full text-left ${
                         isActive 
                           ? 'bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/10' 
                           : 'text-slate-400 hover:text-white hover:bg-slate-850'
@@ -190,7 +194,7 @@ export default function DashboardLayout() {
                     >
                       {item.icon}
                       <span>{item.label}</span>
-                    </Link>
+                    </button>
                   );
                 })}
               </nav>

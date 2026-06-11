@@ -60,3 +60,27 @@ export const createSubject = async (req: Request, res: Response, next: NextFunct
   }
 };
 
+export const updateSubject = async (req: Request, res: Response, next: NextFunction) => {
+  const { id } = req.params;
+  const { name, code, department_id, credits } = req.body;
+
+  try {
+    const checkRes = await query('SELECT id FROM subjects WHERE id = $1', [id]);
+    if (checkRes.rowCount === 0) {
+      return res.status(404).json({ success: false, message: 'Subject not found.' });
+    }
+
+    const result = await query(
+      `UPDATE subjects 
+       SET name = COALESCE($1, name), code = COALESCE($2, code), 
+           department_id = COALESCE($3, department_id), credits = COALESCE($4, credits)
+       WHERE id = $5 RETURNING *`,
+      [name, code, department_id, credits, id]
+    );
+
+    return res.status(200).json({ success: true, message: 'Subject updated successfully.', data: result.rows[0] });
+  } catch (error) {
+    next(error);
+  }
+};
+

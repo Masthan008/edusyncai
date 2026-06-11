@@ -100,3 +100,41 @@ export const getTeacherTimetable = async (req: Request, res: Response, next: Nex
     next(error);
   }
 };
+
+export const updateTimetableSlot = async (req: Request, res: Response, next: NextFunction) => {
+  const { id } = req.params;
+  const { class_id, section_id, subject_id, teacher_id, day_of_week, start_time, end_time, room } = req.body;
+
+  try {
+    const checkRes = await query('SELECT id FROM timetables WHERE id = $1', [id]);
+    if (checkRes.rowCount === 0) {
+      return res.status(404).json({ success: false, message: 'Timetable slot not found.' });
+    }
+
+    if (teacher_id && start_time && end_time) {
+      const teacherClash = await query(
+        `SELECT id FROM timetables 
+         WHERE teacher_id = $1 AND day_of_week = $2 AND id != $3 AND
+               (($4::time, $5::time) OVERLAPS (start_time, end_time))`,
+        [teacher_id, day_of_week || checkRes.rows[0].day_of_week, id, start_time, end_time]
+      );
+      if (teacherClash.rowCount > 0) {
+        return res.status(400).json({ success: false, message: 'Clash detected for this teacher.' });
+      }
+    }
+
+    const result = await query(
+      `UPDATE timetables 
+       SET class_id = COALESCE($1, class_id), section_id = COALESCE($2, section_id),
+           subject_id = COALESCE($3, subject_id), teacher_id = COALESCE($4, teacher_id),
+           day_of_week = COALESCE($5, day_of_week), start_time = COALESCE($6, start_time),
+           end_time = COALESCE($7, end_time), room = COALESCE($8, room)
+       WHERE id = $9 RETURNING *`,
+      [class_id, section_id, subject_id, teacher_id, day_of_week, start_time, end_time, room, id]
+    );
+
+    return res.status(200).json({ success: true, message: 'Timetable slot updated.', data: result.rows[0] });
+  } catch (error) {
+    next(error);
+  }
+};

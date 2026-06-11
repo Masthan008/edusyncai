@@ -206,8 +206,10 @@ CREATE TABLE IF NOT EXISTS payments (
     fee_structure_id UUID NOT NULL REFERENCES fee_structures(id) ON DELETE RESTRICT,
     amount_paid NUMERIC(10,2) NOT NULL,
     payment_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    payment_method VARCHAR(50) NOT NULL, -- Card, Cash, BankTransfer
+    payment_method VARCHAR(50) NOT NULL, -- Card, Cash, BankTransfer, ChequeDD
     transaction_reference VARCHAR(100) UNIQUE,
+    account_number VARCHAR(50), -- For BankTransfer
+    cheque_number VARCHAR(50), -- For Cheque/DD
     status VARCHAR(20) DEFAULT 'Paid', -- Paid, Pending, Failed
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );

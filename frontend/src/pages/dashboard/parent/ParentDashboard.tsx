@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import { api } from '../../../utils/api.js';
 import { useAuthStore } from '../../../store/authStore.js';
 import {
@@ -68,6 +69,7 @@ interface AiInsights {
 /* ── Component ──────────────────────────────────────────────────────── */
 
 export default function ParentDashboard() {
+  const location = useLocation();
   const { profile } = useAuthStore();
   const [children, setChildren] = useState<ChildProfile[]>([]);
   const [selectedChildId, setSelectedChildId] = useState('');
@@ -81,6 +83,8 @@ export default function ParentDashboard() {
   const [activeInvoice, setActiveInvoice] = useState<Invoice | null>(null);
   const [paymentMethod, setPaymentMethod] = useState('Card');
   const [receiptTx, setReceiptTx] = useState<Transaction | null>(null);
+  const [accountNumber, setAccountNumber] = useState('');
+  const [chequeNumber, setChequeNumber] = useState('');
 
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -129,6 +133,14 @@ export default function ParentDashboard() {
     return () => controller.abort();
   }, [selectedChildId]);
 
+  const [activeTab, setActiveTab] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (location.state?.tab) {
+      setActiveTab(location.state.tab);
+    }
+  }, [location.state?.tab]);
+
   const refreshBilling = useCallback(async (childId: string) => {
     try {
       const billRes = await api.get(`/payments/student/${childId}`);
@@ -164,11 +176,15 @@ export default function ParentDashboard() {
           fee_structure_id: activeInvoice.id,
           amount_paid: activeInvoice.balance,
           payment_method: paymentMethod,
+          ...(paymentMethod === 'BankTransfer' ? { account_number: accountNumber } : {}),
+          ...(paymentMethod === 'ChequeDD' ? { cheque_number: chequeNumber } : {}),
         });
-        setSuccessMsg(`Payment of $${activeInvoice.balance} completed successfully.`);
+        setSuccessMsg(`Payment of ₹${activeInvoice.balance} completed successfully.`);
         refreshBilling(selectedChildId);
         refreshAiInsights(selectedChildId);
         setActiveInvoice(null);
+        setAccountNumber('');
+        setChequeNumber('');
       } catch (err: any) {
         setErrorMsg(err.response?.data?.message || 'Payment processing failed.');
       } finally {
@@ -255,7 +271,7 @@ export default function ParentDashboard() {
             <div className="bg-slate-950 border border-slate-700 rounded-2xl p-5 flex justify-between items-center">
               <span className="font-bold text-slate-300">Amount Paid</span>
               <span className="text-2xl font-black text-cyan-400 font-mono">
-                ${parseFloat(receiptTx.amount_paid).toFixed(2)}
+                ₹{parseFloat(receiptTx.amount_paid).toFixed(2)}
               </span>
             </div>
 
@@ -386,7 +402,7 @@ export default function ParentDashboard() {
                   <span className="font-bold text-sm text-slate-200 block">{inv.name}</span>
                   <div className="flex gap-4 text-[10px] text-slate-500 font-mono">
                     <span>Due Date: {inv.due_date.split('T')[0]}</span>
-                    <span>Total Bill: ${inv.amount.toFixed(2)}</span>
+                    <span>Total Bill: ₹{inv.amount.toFixed(2)}</span>
                   </div>
                 </div>
 
@@ -394,7 +410,7 @@ export default function ParentDashboard() {
                   <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                     inv.status === 'Paid' ? 'bg-emerald-950 text-emerald-400' : 'bg-rose-950 text-rose-400'
                   }`}>
-                    {inv.status} (Bal: ${inv.balance.toFixed(2)})
+                    {inv.status} (Bal: ₹{inv.balance.toFixed(2)})
                   </span>
                   {inv.balance > 0 && (
                     <button
@@ -428,7 +444,7 @@ export default function ParentDashboard() {
                 <div>
                   <label htmlFor="invoice-balance" className="text-slate-500 block mb-1">Invoice Balance to Pay</label>
                   <span id="invoice-balance" className="block font-mono text-cyan-400 font-bold text-sm bg-slate-900 border border-slate-800 px-3 py-2 rounded-xl">
-                    ${activeInvoice.balance.toFixed(2)}
+                    ₹{activeInvoice.balance.toFixed(2)}
                   </span>
                 </div>
                 <div>
@@ -437,11 +453,16 @@ export default function ParentDashboard() {
                     id="payment-method"
                     aria-label="Payment method"
                     value={paymentMethod}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
+                    onChange={(e) => {
+                      setPaymentMethod(e.target.value);
+                      setAccountNumber('');
+                      setChequeNumber('');
+                    }}
                     className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2 outline-none"
                   >
                     <option value="Card">Online Credit Card</option>
                     <option value="BankTransfer">Direct Bank Transfer</option>
+                    <option value="ChequeDD">Cheque / DD</option>
                   </select>
                 </div>
                 <button
@@ -453,6 +474,34 @@ export default function ParentDashboard() {
                   {loading ? 'Processing...' : 'Complete Payment'}
                 </button>
               </form>
+              {paymentMethod === 'BankTransfer' && (
+                <div className="mt-3">
+                  <label htmlFor="parent-account-number" className="text-slate-500 block mb-1 text-xs">Bank Account Number</label>
+                  <input
+                    id="parent-account-number"
+                    type="text" required
+                    value={accountNumber}
+                    onChange={(e) => setAccountNumber(e.target.value)}
+                    placeholder="e.g. 1234567890"
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2 outline-none text-xs font-mono"
+                    aria-label="Bank account number"
+                  />
+                </div>
+              )}
+              {paymentMethod === 'ChequeDD' && (
+                <div className="mt-3">
+                  <label htmlFor="parent-cheque-number" className="text-slate-500 block mb-1 text-xs">Cheque / DD Number</label>
+                  <input
+                    id="parent-cheque-number"
+                    type="text" required
+                    value={chequeNumber}
+                    onChange={(e) => setChequeNumber(e.target.value)}
+                    placeholder="e.g. CHQ-0042891"
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2 outline-none text-xs font-mono"
+                    aria-label="Cheque or DD number"
+                  />
+                </div>
+              )}
             </div>
           )}
 
@@ -470,7 +519,7 @@ export default function ParentDashboard() {
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
-                    <span className="font-bold text-emerald-400 font-mono">+${parseFloat(tx.amount_paid).toFixed(2)}</span>
+                    <span className="font-bold text-emerald-400 font-mono">+₹{parseFloat(tx.amount_paid).toFixed(2)}</span>
                     <button
                       onClick={() => openReceipt(tx)}
                       className="text-[10px] text-cyan-400 hover:text-cyan-300 font-bold hover:underline transition"

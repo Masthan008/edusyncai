@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { 
   GraduationCap, Shield, Users, BarChart3, Clock, Landmark, 
-  ArrowRight, BookOpen, School, Sparkles, MessageSquare, Check, HelpCircle
+  ArrowRight, BookOpen, School, Sparkles, MessageSquare, Check, HelpCircle, Rocket
 } from 'lucide-react';
 
 export default function LandingPage() {
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'annually'>('annually');
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
+  const navigate = useNavigate();
 
   const stats = [
     { value: '250+', label: 'Schools enrolled' },
@@ -154,10 +155,13 @@ export default function LandingPage() {
           Manage students, schedules, teachers, grade sheets, invoices, and parents through a unified visual control center. Built for modern schools, colleges, and university centers.
         </p>
 
-        <div className="flex flex-col sm:flex-row gap-4 mb-20 w-full justify-center px-4 max-w-md">
+        <div className="flex flex-col sm:flex-row gap-4 mb-20 w-full justify-center px-4 max-w-lg">
           <Link to="/register" className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-8 py-4 rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/20 text-base">
             Start ERP Portal <ArrowRight className="h-5 w-5" />
           </Link>
+          <button onClick={() => navigate('/login')} className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-8 py-4 rounded-xl transition flex items-center justify-center gap-2 text-base shadow-lg shadow-indigo-500/20">
+            Deploy Portal <Rocket className="h-5 w-5" />
+          </button>
           <a href="#features" className="bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 font-bold px-8 py-4 rounded-xl transition flex items-center justify-center gap-2 text-base">
             Explore Features
           </a>
@@ -270,8 +274,8 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             {workflowSteps.map((step, idx) => (
               <div key={idx} className="relative bg-slate-900 border border-slate-800 p-6 rounded-2xl flex flex-col gap-4">
-                <span className="text-5xl font-black text-slate-800 absolute right-4 top-2 select-none">{step.num}</span>
-                <h3 className="text-lg font-bold z-10">{step.title}</h3>
+                <span className="text-5xl font-black text-slate-800/60 absolute right-4 top-2 select-none leading-none z-0">{step.num}</span>
+                <h3 className="text-lg font-bold relative z-10">{step.title}</h3>
                 <p className="text-slate-400 text-sm leading-relaxed z-10">{step.desc}</p>
               </div>
             ))}
