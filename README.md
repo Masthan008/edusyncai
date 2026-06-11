@@ -116,27 +116,29 @@ The client dashboard opens on [http://localhost:3000](http://localhost:3000).
 | Endpoint | Method | Role Permissions | Description |
 |---|---|---|---|
 | `/api/auth/login` | `POST` | Public | Authenticate user & issue tokens |
+| `/api/auth/register` | `POST` | Public | Register a new user account with role profiles |
 | `/api/auth/profile` | `GET` | All Roles | Fetch current profile metadata |
 | `/api/students` | `GET`, `POST` | Admin, Principal, HOD | List directory and admit new students |
 | `/api/teachers` | `GET`, `POST` | Admin, Principal | List faculty and register workload |
 | `/api/departments` | `GET`, `POST` | Admin, Principal | List departments and assign HOD |
 | `/api/school/classes` | `GET` | All Roles | Fetch registered grade classes catalog |
+| `/api/school/subjects` | `GET`, `POST` | GET: All, POST: Admin, Principal | Manage course subjects catalog |
 | `/api/attendance` | `POST` | Teacher, Admin | Record daily/subject roster check-in logs |
 | `/api/exams/grade` | `POST` | Teacher, Admin | Log test scores & convert points |
 | `/api/exams/report-card/:id`| `GET` | Student, Parent, Admin | Get report transcript sheet & GPA card |
 | `/api/assignments/submit`| `POST` | Student | Upload simulated assignment PDF link |
-| `/api/payments/record` | `POST` | Parent, Accountant | Process invoices or manual draft payments |
+| `/api/payments/record` | `POST` | Parent, Accountant | Process invoices or bank draft payments |
+| `/api/payments/student/:id`| `GET` | Parent, Accountant | Fetch student outstanding invoices & history |
 | `/api/timetables/class/:c/:s`| `GET` | All Roles | Fetch calendars and scheduler slots |
 | `/api/ai/assistant` | `POST` | Student, Teacher | Send questions to AI academic helper |
 | `/api/ai/insights/:id` | `GET` | Parent, Student | Fetch performance trend diagnostics |
 
 ---
 
-## 🧪 Demo Test Profiles
-To quickly test the dashboards without typing details, click the role shortcuts on the login screen to login instantly as:
-*   **Admin**: `admin@edusync.com` / `admin123`
-*   **HOD**: `hod@edusync.com` / `hod123`
-*   **Teacher**: `teacher@edusync.com` / `teacher123`
-*   **Student**: `student@edusync.com` / `student123`
-*   **Parent**: `parent@edusync.com` / `parent123`
-*   **Accountant**: `accountant@edusync.com` / `accountant123`
+## 🧪 Seeding & Test Credentials
+To get started on a clean setup:
+1. Register a new user directly in the frontend using the **Create an account** link. Select your desired role (Admin, Accountant, Teacher, Student, or Parent) to automatically provision the matching dashboard portal.
+2. The database seeder comes pre-configured with a default **System Administrator** account:
+   *   **Email**: `admin@edusync.com`
+   *   **Password**: `admin123`
+

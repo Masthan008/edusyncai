@@ -74,7 +74,37 @@ async function main() {
       'INSERT INTO users (email, password_hash, role_id) VALUES ($1, $2, $3) RETURNING id',
       ['admin@edusync.com', hash('admin123'), roleIdMap['Admin']]
     );
-    console.log('🎉 PostgreSQL Database successfully seeded with baseline roles and Admin user!');
+
+    // Seed Departments
+    console.log('🌱 Seeding Departments...');
+    const deptSciRes = await pool.query("INSERT INTO departments (name, code) VALUES ('Science Department', 'SCI') RETURNING id");
+    const deptHumRes = await pool.query("INSERT INTO departments (name, code) VALUES ('Humanities Department', 'HUM') RETURNING id");
+    const sciId = deptSciRes.rows[0].id;
+    const humId = deptHumRes.rows[0].id;
+
+    // Seed Classes
+    console.log('🌱 Seeding Classes...');
+    const cls10Res = await pool.query("INSERT INTO classes (name, department_id) VALUES ('Grade 10', $1) RETURNING id", [sciId]);
+    const cls11Res = await pool.query("INSERT INTO classes (name, department_id) VALUES ('Grade 11', $1) RETURNING id", [sciId]);
+    const cls10Id = cls10Res.rows[0].id;
+    const cls11Id = cls11Res.rows[0].id;
+
+    // Seed Sections
+    console.log('🌱 Seeding Sections...');
+    await pool.query("INSERT INTO sections (name, class_id, room_number) VALUES ('A', $1, 'Room 101')", [cls10Id]);
+    await pool.query("INSERT INTO sections (name, class_id, room_number) VALUES ('B', $1, 'Room 102')", [cls10Id]);
+    await pool.query("INSERT INTO sections (name, class_id, room_number) VALUES ('A', $1, 'Room 201')", [cls11Id]);
+
+    // Seed Subjects
+    console.log('🌱 Seeding Subjects...');
+    await pool.query("INSERT INTO subjects (name, code, department_id, credits) VALUES ('Mathematics', 'MATH-101', $1, 4)", [sciId]);
+    await pool.query("INSERT INTO subjects (name, code, department_id, credits) VALUES ('Organic Chemistry', 'CHEM-101', $1, 3)", [sciId]);
+    await pool.query("INSERT INTO subjects (name, code, department_id, credits) VALUES ('Physics', 'PHYS-101', $1, 3)", [sciId]);
+    await pool.query("INSERT INTO subjects (name, code, department_id, credits) VALUES ('Biology', 'BIOL-101', $1, 3)", [sciId]);
+    await pool.query("INSERT INTO subjects (name, code, department_id, credits) VALUES ('English Literature', 'ENGL-101', $1, 2)", [humId]);
+    await pool.query("INSERT INTO subjects (name, code, department_id, credits) VALUES ('Computer Science', 'COSC-101', $1, 4)", [sciId]);
+
+    console.log('🎉 PostgreSQL Database successfully seeded with baseline roles, Admin user, departments, classes, sections, and subjects catalog!');
   } catch (error) {
     console.error('❌ Error seeding PostgreSQL database:', error);
   } finally {

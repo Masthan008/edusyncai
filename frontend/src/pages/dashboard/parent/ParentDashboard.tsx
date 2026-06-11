@@ -93,6 +93,80 @@ export default function ParentDashboard() {
     }
   };
 
+  const printReceipt = (tx: any) => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Receipt - ${tx.transaction_reference}</title>
+          <style>
+            body { font-family: Arial, sans-serif; color: #1e293b; padding: 40px; line-height: 1.5; }
+            .receipt-card { max-w: 600px; margin: 0 auto; border: 1px solid #e2e8f0; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+            .header { border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+            .logo { font-size: 24px; font-weight: bold; color: #06b6d4; }
+            .title { font-size: 18px; text-transform: uppercase; letter-spacing: 1px; color: #64748b; font-weight: bold; }
+            .grid { display: grid; grid-template-cols: 1fr 1fr; gap: 20px; margin-bottom: 30px; }
+            .label { font-size: 11px; text-transform: uppercase; color: #94a3b8; font-weight: bold; margin-bottom: 2px; }
+            .value { font-size: 14px; color: #334155; font-weight: 600; }
+            .total-section { background-color: #f8fafc; border: 1px solid #f1f5f9; padding: 20px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
+            .total-label { font-size: 16px; font-weight: bold; color: #475569; }
+            .total-value { font-size: 24px; font-weight: 900; color: #0891b2; font-family: monospace; }
+            .footer { text-align: center; margin-top: 40px; font-size: 11px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 20px; }
+          </style>
+        </head>
+        <body>
+          <div class="receipt-card">
+            <div class="header">
+              <div class="logo">EduSync AI</div>
+              <div class="title">Official Receipt</div>
+            </div>
+            
+            <div class="grid">
+              <div>
+                <div class="label">Reference ID</div>
+                <div class="value">${tx.transaction_reference}</div>
+              </div>
+              <div>
+                <div class="label">Payment Date</div>
+                <div class="value">${tx.payment_date.split('T')[0]}</div>
+              </div>
+              <div>
+                <div class="label">Student Name</div>
+                <div class="value">${childProfile?.first_name || 'Student'} ${childProfile?.last_name || ''}</div>
+              </div>
+              <div>
+                <div class="label">Payment Method</div>
+                <div class="value">${tx.payment_method}</div>
+              </div>
+              <div style="grid-column: span 2;">
+                <div class="label">Description</div>
+                <div class="value">${tx.fee_name || 'School Fee Payment'}</div>
+              </div>
+            </div>
+
+            <div class="total-section">
+              <div class="total-label">Amount Paid</div>
+              <div class="total-value">$${parseFloat(tx.amount_paid).toFixed(2)}</div>
+            </div>
+
+            <div class="footer">
+              Thank you for your payment. For inquiries, contact the billing office at finance@edusync.com<br>
+              &copy; ${new Date().getFullYear()} EduSync AI Inc. All rights reserved.
+            </div>
+          </div>
+          <script>
+            window.onload = function() {
+              window.print();
+            }
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
   const chartData = reportCard?.grades?.map((g: any) => ({
     name: g.subject_code,
     value: parseFloat(g.marks_obtained)
@@ -285,6 +359,38 @@ export default function ParentDashboard() {
               </form>
             </div>
           )}
+
+          {/* Transaction History Section */}
+          <div className="border-t border-slate-800/60 pt-6 mt-6 space-y-4">
+            <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">Transaction Receipt History</span>
+            <div className="space-y-2.5">
+              {billing.history && billing.history.map((tx: any) => (
+                <div key={tx.id} className="p-4 bg-slate-950/40 border border-slate-800/80 rounded-2xl flex flex-col sm:flex-row justify-between sm:items-center gap-4 text-xs">
+                  <div>
+                    <span className="font-bold text-slate-200 block">{tx.fee_name || 'School Fee Payment'}</span>
+                    <div className="flex gap-4 text-[10px] text-slate-500 font-mono mt-1">
+                      <span>Ref: {tx.transaction_reference}</span>
+                      <span>Paid: {tx.payment_date.split('T')[0]}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <span className="font-bold text-emerald-400 font-mono">+${parseFloat(tx.amount_paid).toFixed(2)}</span>
+                    <button
+                      onClick={() => printReceipt(tx)}
+                      className="text-[10px] text-cyan-400 hover:text-cyan-300 font-bold hover:underline transition"
+                    >
+                      Print Receipt
+                    </button>
+                  </div>
+                </div>
+              ))}
+              {(!billing.history || billing.history.length === 0) && (
+                <div className="text-left py-4 text-slate-500 text-xs italic">
+                  No transaction history logged for this student.
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Academic Standings scores chart (Recharts Bar chart) */}
