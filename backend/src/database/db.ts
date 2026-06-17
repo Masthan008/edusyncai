@@ -80,6 +80,71 @@ export const mockDb: any = {
   payments: [],
   timetables: [],
   notifications: [],
+  sops: [
+    {
+      id: 'sop-enrollment',
+      title: 'Student Enrollment Checklist',
+      category: 'Admissions',
+      description: 'Standard workflow steps to process and enroll a new student candidate into the academy.',
+      steps: [
+        { step: 1, title: 'Application Submission', description: "Parent submits the online application form and child's birth certificate/transcripts.", role: 'Parent' },
+        { step: 2, title: 'Document Verification', description: 'Registrar reviews papers and assigns an entry assessment date.', role: 'Admin' },
+        { step: 3, title: 'Academic Assessment', description: 'Student candidate completes the entry test or academic interview.', role: 'Student' },
+        { step: 4, title: 'Board Approval', description: 'Admissions committee approves or rejects the candidate, generating the official offer letter.', role: 'Admin' },
+        { step: 5, title: 'ERP Setup & Billing', description: 'Administrator registers details in the ERP and generates tuition billing records.', role: 'Admin' }
+      ],
+      created_by: 'user-admin-1',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    },
+    {
+      id: 'sop-grading',
+      title: 'Exam Grading & Progression',
+      category: 'Academics',
+      description: 'Operational workflow for preparing exams, entering student grades, and publishing report cards.',
+      steps: [
+        { step: 1, title: 'Setup Grading Weights', description: 'Subject teacher creates the exam schedule and structures the grading parameters.', role: 'Teacher' },
+        { step: 2, title: 'Conduct Exams', description: 'Invigilators supervise assessment sessions and enforce compliance rules.', role: 'Teacher' },
+        { step: 3, title: 'Grade Entries', description: 'Teachers grade papers and log marks into the ERP within 7 days of the exam.', role: 'Teacher' },
+        { step: 4, title: 'HOD Review & Lock', description: 'Head of Department reviews and locks grades for all department subjects.', role: 'HOD' },
+        { step: 5, title: 'Report Card Release', description: 'Registrar publishes final report cards to Student and Parent portals.', role: 'Admin' }
+      ],
+      created_by: 'user-admin-1',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    },
+    {
+      id: 'sop-billing',
+      title: 'Tuition Billing & Reminders',
+      category: 'Finance',
+      description: 'Instructions for billing fees, recording payments, and sending invoice reminders.',
+      steps: [
+        { step: 1, title: 'Fee Template Setup', description: 'Accountant schedules fee structures at the start of the academic year.', role: 'Accountant' },
+        { step: 2, title: 'Invoice Dispatch', description: 'ERP system automatically issues digital invoices and bills parents.', role: 'Admin' },
+        { step: 3, title: 'Payment Submission', description: 'Parents execute online payment or submit bank transfer details.', role: 'Parent' },
+        { step: 4, title: 'Reconciliation & Receipt', description: 'Accountant reviews bank transfer references, verifies payment, and generates receipts.', role: 'Accountant' },
+        { step: 5, title: 'Delinquency Reminders', description: 'System initiates automated payment reminders after the fee grace period.', role: 'Admin' }
+      ],
+      created_by: 'user-admin-1',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    },
+    {
+      id: 'sop-deployment',
+      title: 'ERP Backup & Server Deployment',
+      category: 'Operations',
+      description: 'IT procedure for validating and compiling code, taking database backups, and deploying server builds.',
+      steps: [
+        { step: 1, title: 'Code Integrity Test', description: 'Developers test updates and run backend/frontend compile checks.', role: 'Admin' },
+        { step: 2, title: 'Database Dump', description: 'Operator runs automated pg_dump scripts for nightly database backup.', role: 'Admin' },
+        { step: 3, title: 'Build Deployment', description: 'Push code to GitHub main branch to trigger CI/CD pipeline building processes.', role: 'Admin' },
+        { step: 4, title: 'Smoke Testing', description: 'Systems Administrator executes automated tests to confirm login and route latency.', role: 'Admin' }
+      ],
+      created_by: 'user-admin-1',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }
+  ]
 };
 
 // Generic query router for mock database (simulating PostgreSQL query responses)
@@ -439,6 +504,60 @@ export const query = async (text: string, params: any[] = []): Promise<{ rows: a
   // 15. Notifications
   if (q.includes('FROM notifications')) {
     return { rows: mockDb.notifications, rowCount: mockDb.notifications.length };
+  }
+
+  // 16. SOPs (Standard Operating Procedures)
+  if (q.includes('FROM sops')) {
+    if (q.includes('WHERE id =')) {
+      const id = params[0];
+      const sop = mockDb.sops.find((s: any) => s.id === id);
+      return { rows: sop ? [sop] : [], rowCount: sop ? 1 : 0 };
+    }
+    return { rows: mockDb.sops, rowCount: mockDb.sops.length };
+  }
+
+  if (q.startsWith('INSERT INTO sops')) {
+    const [title, category, description, steps, created_by] = params;
+    const newSop = {
+      id: `sop-${Date.now()}`,
+      title,
+      category,
+      description: description || null,
+      steps: typeof steps === 'string' ? JSON.parse(steps) : steps,
+      created_by: created_by || null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    mockDb.sops.push(newSop);
+    return { rows: [newSop], rowCount: 1 };
+  }
+
+  if (q.startsWith('UPDATE sops')) {
+    const id = params[params.length - 1];
+    const index = mockDb.sops.findIndex((s: any) => s.id === id);
+    if (index === -1) {
+      return { rows: [], rowCount: 0 };
+    }
+    const [title, category, description, steps] = params;
+    mockDb.sops[index] = {
+      ...mockDb.sops[index],
+      title: title !== undefined ? title : mockDb.sops[index].title,
+      category: category !== undefined ? category : mockDb.sops[index].category,
+      description: description !== undefined ? description : mockDb.sops[index].description,
+      steps: steps !== undefined ? (typeof steps === 'string' ? JSON.parse(steps) : steps) : mockDb.sops[index].steps,
+      updated_at: new Date().toISOString()
+    };
+    return { rows: [mockDb.sops[index]], rowCount: 1 };
+  }
+
+  if (q.startsWith('DELETE FROM sops')) {
+    const id = params[0];
+    const index = mockDb.sops.findIndex((s: any) => s.id === id);
+    if (index !== -1) {
+      mockDb.sops.splice(index, 1);
+      return { rows: [], rowCount: 1 };
+    }
+    return { rows: [], rowCount: 0 };
   }
 
   // Default fallback for any unhandled queries (empty array to avoid crashing)

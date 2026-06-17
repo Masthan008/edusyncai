@@ -188,7 +188,21 @@ interface TabDef {
   label: string;
 }
 
-type TabId = 'overview' | 'students' | 'teachers' | 'departments' | 'timetables' | 'billing';
+interface SopStep {
+  step: number;
+  title: string;
+  description?: string | null;
+  role?: string | null;
+}
+
+interface SopFormState {
+  title: string;
+  category: string;
+  description: string;
+  steps: SopStep[];
+}
+
+type TabId = 'overview' | 'students' | 'teachers' | 'departments' | 'timetables' | 'billing' | 'sops';
 
 const TABS: TabDef[] = [
   { id: 'overview', label: 'Overview' },
@@ -197,7 +211,15 @@ const TABS: TabDef[] = [
   { id: 'departments', label: 'Departments' },
   { id: 'timetables', label: 'Timetables' },
   { id: 'billing', label: 'Finance' },
+  { id: 'sops', label: 'SOP Guidelines' },
 ];
+
+const DEFAULT_SOP_FORM: SopFormState = {
+  title: '',
+  category: 'General',
+  description: '',
+  steps: [{ step: 1, title: '', description: '', role: 'Admin' }],
+};
 
 const COLORS = ['#06b6d4', '#3b82f6', '#f59e0b', '#ef4444'];
 
@@ -254,6 +276,13 @@ function AdminDashboard() {
   const [timetables, setTimetables] = useState<Timetable[]>([]);
   const [feeStructures, setFeeStructures] = useState<FeeStructure[]>([]);
 
+  const [sops, setSops] = useState<any[]>([]);
+  const [selectedSop, setSelectedSop] = useState<any | null>(null);
+  const [sopSearch, setSopSearch] = useState('');
+  const [sopCategoryFilter, setSopCategoryFilter] = useState('');
+  const [sopForm, setSopForm] = useState<SopFormState>(DEFAULT_SOP_FORM);
+  const [editingSop, setEditingSop] = useState<any | null>(null);
+
   const [studentSearch, setStudentSearch] = useState('');
   const [classFilter, setClassFilter] = useState('');
   const [teacherSearch, setTeacherSearch] = useState('');
@@ -286,17 +315,22 @@ function AdminDashboard() {
 
     const load = async () => {
       try {
-        const [overviewRes, studentsRes, teachersRes, departmentsRes] = await Promise.all([
+        const [overviewRes, studentsRes, teachersRes, departmentsRes, sopsRes] = await Promise.all([
           api.get('/analytics/overview', { signal: controller.signal }),
           api.get('/students', { signal: controller.signal }),
           api.get('/teachers', { signal: controller.signal }),
           api.get('/departments', { signal: controller.signal }),
+          api.get('/sops', { signal: controller.signal }),
         ]);
         if (!controller.signal.aborted) {
           setOverview(overviewRes.data.data);
           setStudents(studentsRes.data.data);
           setTeachers(teachersRes.data.data);
           setDepartments(departmentsRes.data.data);
+          setSops(sopsRes.data.data);
+          if (sopsRes.data.data.length > 0) {
+            setSelectedSop(sopsRes.data.data[0]);
+          }
         }
 
         const [classesRes, sectionsRes, subjectsRes, feeRes] = await Promise.all([
@@ -507,6 +541,49 @@ function AdminDashboard() {
       setLoading(false);
     }
   }, [feeForm, editingFee, addNotification]);
+
+  const handleSopSubmit = useCallback(async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      if (editingSop) {
+        await api.put(`/sops/${editingSop.id}`, sopForm);
+        addNotification('success', 'SOP updated successfully.');
+      } else {
+        await api.post('/sops', sopForm);
+        addNotification('success', 'SOP created successfully.');
+      }
+      const res = await api.get('/sops');
+      setSops(res.data.data);
+      const updated = res.data.data.find((s: any) => s.title === sopForm.title) || res.data.data[0];
+      setSelectedSop(updated);
+      setEditingSop(null);
+      setSopForm(DEFAULT_SOP_FORM);
+    } catch (err: any) {
+      addNotification('error', err.response?.data?.message || 'Failed to save SOP.');
+    } finally {
+      setLoading(false);
+    }
+  }, [sopForm, editingSop, addNotification]);
+
+  const handleSopDelete = useCallback(async (id: string) => {
+    setLoading(true);
+    try {
+      await api.delete(`/sops/${id}`);
+      addNotification('success', 'SOP deleted successfully.');
+      const res = await api.get('/sops');
+      setSops(res.data.data);
+      if (res.data.data.length > 0) {
+        setSelectedSop(res.data.data[0]);
+      } else {
+        setSelectedSop(null);
+      }
+    } catch {
+      addNotification('error', 'Failed to delete SOP.');
+    } finally {
+      setLoading(false);
+    }
+  }, [addNotification]);
 
   const handleCreateSubject = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -2011,6 +2088,299 @@ function AdminDashboard() {
                     </tbody>
                   </table>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB CONTENT: SOPS */}
+      {activeTab === 'sops' && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start" id="tabpanel-sops" role="tabpanel" aria-label="SOP Guidelines">
+          {/* Create/Edit Form */}
+          <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-3xl space-y-4">
+            <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
+              {editingSop ? (
+                <svg className="h-5 w-5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+              ) : (
+                <Plus className="h-5 w-5 text-cyan-400" />
+              )}
+              <h2 className="text-lg font-bold">{editingSop ? 'Edit SOP Guideline' : 'Create SOP Guideline'}</h2>
+            </div>
+
+            <form onSubmit={handleSopSubmit} className="space-y-3.5 text-xs">
+              <div>
+                <label className="text-slate-400 font-semibold block mb-1" htmlFor="sop-title">SOP Title</label>
+                <input
+                  id="sop-title"
+                  type="text" required
+                  value={sopForm.title}
+                  onChange={(e) => setSopForm({ ...sopForm, title: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 outline-none focus:border-cyan-500 text-xs"
+                  placeholder="e.g. Student Enrollment Checklist"
+                />
+              </div>
+
+              <div>
+                <label className="text-slate-400 font-semibold block mb-1" htmlFor="sop-category">Category</label>
+                <select
+                  id="sop-category"
+                  value={sopForm.category}
+                  onChange={(e) => setSopForm({ ...sopForm, category: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 outline-none text-xs text-slate-200"
+                >
+                  <option value="Admissions">Admissions</option>
+                  <option value="Academics">Academics</option>
+                  <option value="Finance">Finance</option>
+                  <option value="Operations">Operations</option>
+                  <option value="General">General</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-slate-400 font-semibold block mb-1" htmlFor="sop-desc">Description</label>
+                <textarea
+                  id="sop-desc"
+                  value={sopForm.description}
+                  onChange={(e) => setSopForm({ ...sopForm, description: e.target.value })}
+                  rows={2}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 outline-none focus:border-cyan-500 text-xs text-slate-300 font-sans"
+                  placeholder="Brief explanation of this procedure..."
+                />
+              </div>
+
+              <div className="space-y-2.5">
+                <div className="flex justify-between items-center border-b border-slate-800 pb-1.5">
+                  <span className="text-slate-400 font-bold block">Checklist Steps ({sopForm.steps.length})</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newSteps = [...sopForm.steps, { step: sopForm.steps.length + 1, title: '', description: '', role: 'Admin' }];
+                      setSopForm({ ...sopForm, steps: newSteps });
+                    }}
+                    className="text-[10px] text-cyan-400 hover:text-cyan-300 font-bold hover:underline transition"
+                  >
+                    + Add Step
+                  </button>
+                </div>
+
+                <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
+                  {sopForm.steps.map((st, i) => (
+                    <div key={i} className="p-3 bg-slate-950/80 border border-slate-800 rounded-2xl space-y-2 relative">
+                      <div className="flex justify-between items-center">
+                        <span className="font-bold text-[10px] text-cyan-500 uppercase font-mono">Step {st.step}</span>
+                        {sopForm.steps.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const filtered = sopForm.steps.filter((_, idx) => idx !== i).map((item, idx) => ({ ...item, step: idx + 1 }));
+                              setSopForm({ ...sopForm, steps: filtered });
+                            }}
+                            className="text-[10px] text-rose-400 hover:text-rose-300 transition"
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                      <input
+                        type="text" required
+                        placeholder="Step Title"
+                        value={st.title}
+                        onChange={(e) => {
+                          const updated = [...sopForm.steps];
+                          updated[i].title = e.target.value;
+                          setSopForm({ ...sopForm, steps: updated });
+                        }}
+                        className="w-full bg-slate-900 border border-slate-800 rounded-lg p-1.5 outline-none text-xs text-slate-200"
+                      />
+                      <input
+                        type="text"
+                        placeholder="Step Description (details)"
+                        value={st.description || ''}
+                        onChange={(e) => {
+                          const updated = [...sopForm.steps];
+                          updated[i].description = e.target.value;
+                          setSopForm({ ...sopForm, steps: updated });
+                        }}
+                        className="w-full bg-slate-900 border border-slate-800 rounded-lg p-1.5 outline-none text-[11px] text-slate-300"
+                      />
+                      <select
+                        value={st.role || 'Admin'}
+                        onChange={(e) => {
+                          const updated = [...sopForm.steps];
+                          updated[i].role = e.target.value;
+                          setSopForm({ ...sopForm, steps: updated });
+                        }}
+                        className="w-full bg-slate-900 border border-slate-800 rounded-lg p-1.5 outline-none text-[11px] text-slate-400"
+                      >
+                        <option value="Admin">Admin</option>
+                        <option value="Principal">Principal</option>
+                        <option value="HOD">HOD</option>
+                        <option value="Teacher">Teacher</option>
+                        <option value="Student">Student</option>
+                        <option value="Parent">Parent</option>
+                        <option value="Accountant">Accountant</option>
+                      </select>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                {editingSop && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingSop(null);
+                      setSopForm(DEFAULT_SOP_FORM);
+                    }}
+                    className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-2.5 rounded-xl transition text-xs shadow-md"
+                  >
+                    Cancel
+                  </button>
+                )}
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="flex-1 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold py-2.5 rounded-xl transition text-xs shadow-md"
+                >
+                  {loading ? 'Saving...' : editingSop ? 'Update SOP' : 'Create SOP'}
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* List & Viewer */}
+          <div className="lg:col-span-2 space-y-6">
+            <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-3xl space-y-4">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <h2 className="text-lg font-bold">Procedural Guidelines Library</h2>
+                <div className="flex flex-wrap items-center gap-2 text-xs">
+                  <div className="flex items-center gap-1.5 bg-slate-950 border border-slate-800 px-3 py-1.5 rounded-xl">
+                    <Search className="h-3.5 w-3.5 text-slate-505" />
+                    <input
+                      type="text"
+                      placeholder="Search Title..."
+                      value={sopSearch}
+                      onChange={(e) => setSopSearch(e.target.value)}
+                      className="bg-transparent border-none outline-none text-xs w-28 text-slate-200"
+                    />
+                  </div>
+                  <select
+                    value={sopCategoryFilter}
+                    onChange={(e) => setSopCategoryFilter(e.target.value)}
+                    className="bg-slate-950 border border-slate-800 rounded-xl p-1.5 outline-none"
+                  >
+                    <option value="">All Categories</option>
+                    <option value="Admissions">Admissions</option>
+                    <option value="Academics">Academics</option>
+                    <option value="Finance">Finance</option>
+                    <option value="Operations">Operations</option>
+                    <option value="General">General</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Grid of SOPs */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {sops
+                  .filter((s) => !sopCategoryFilter || s.category === sopCategoryFilter)
+                  .filter((s) => !sopSearch || s.title.toLowerCase().includes(sopSearch.toLowerCase()))
+                  .map((sop) => (
+                    <button
+                      key={sop.id}
+                      onClick={() => setSelectedSop(sop)}
+                      className={`p-4 rounded-2xl text-left border transition ${
+                        selectedSop?.id === sop.id
+                          ? 'bg-cyan-500/10 border-cyan-500/40 shadow-lg shadow-cyan-500/5'
+                          : 'bg-slate-950/40 border-slate-800/80 hover:border-slate-700/60'
+                      }`}
+                    >
+                      <div className="flex justify-between items-start mb-1.5">
+                        <span className="font-extrabold text-sm text-slate-200 block truncate max-w-[160px]">{sop.title}</span>
+                        <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-slate-800 text-cyan-400 border border-slate-700">
+                          {sop.category}
+                        </span>
+                      </div>
+                      <p className="text-slate-400 text-xs line-clamp-2 leading-relaxed">{sop.description || 'No description provided.'}</p>
+                    </button>
+                  ))}
+              </div>
+            </div>
+
+            {/* Selected SOP Detail Pane */}
+            {selectedSop ? (
+              <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-3xl space-y-6">
+                <div className="flex justify-between items-start border-b border-slate-800/80 pb-4">
+                  <div>
+                    <div className="flex items-center gap-3">
+                      <h3 className="text-xl font-bold text-slate-100">{selectedSop.title}</h3>
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-cyan-950/60 text-cyan-400 border border-cyan-900">
+                        {selectedSop.category}
+                      </span>
+                    </div>
+                    <p className="text-slate-400 text-xs mt-1.5 leading-relaxed">{selectedSop.description}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        setEditingSop(selectedSop);
+                        setSopForm({
+                          title: selectedSop.title,
+                          category: selectedSop.category,
+                          description: selectedSop.description || '',
+                          steps: selectedSop.steps,
+                        });
+                      }}
+                      className="px-3 py-1.5 bg-slate-850 hover:bg-slate-800 border border-slate-800 text-cyan-400 hover:text-cyan-300 font-bold rounded-xl text-xs transition"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => {
+                        setConfirmDialog({
+                          message: `Are you sure you want to permanently delete the "${selectedSop.title}" SOP guideline?`,
+                          onConfirm: () => handleSopDelete(selectedSop.id),
+                        });
+                      }}
+                      className="p-1.5 bg-slate-950 border border-slate-800/80 text-rose-400 hover:text-rose-300 hover:bg-rose-950/20 rounded-xl transition"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Steps Checklist Vertical Timeline */}
+                <div className="space-y-4">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2">Checklist Steps</span>
+                  <div className="relative border-l border-slate-800 ml-4 pl-6 space-y-6">
+                    {selectedSop.steps.map((st: any, i: number) => (
+                      <div key={i} className="relative">
+                        {/* Timeline Bullet Point */}
+                        <div className="absolute -left-[35px] top-0.5 h-6 w-6 rounded-full bg-slate-900 border-2 border-cyan-500 flex items-center justify-center text-[10px] font-bold text-cyan-400 font-mono">
+                          {st.step}
+                        </div>
+                        <div className="space-y-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-bold text-sm text-slate-200">{st.title}</span>
+                            {st.role && (
+                              <span className="px-2 py-0.5 bg-slate-950 border border-slate-800 text-slate-400 font-mono text-[9px] rounded-md uppercase font-semibold">
+                                Owner: {st.role}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-slate-400 text-xs leading-relaxed">{st.description}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-slate-900/60 border border-slate-800 p-8 rounded-3xl text-center text-slate-500 text-xs italic">
+                Select an SOP guideline card above to view detailed steps.
+              </div>
+            )}
           </div>
         </div>
       )}

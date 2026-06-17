@@ -132,6 +132,9 @@ The client dashboard opens on [http://localhost:3000](http://localhost:3000).
 | `/api/timetables/class/:c/:s`| `GET` | All Roles | Fetch calendars and scheduler slots |
 | `/api/ai/assistant` | `POST` | Student, Teacher | Send questions to AI academic helper |
 | `/api/ai/insights/:id` | `GET` | Parent, Student | Fetch performance trend diagnostics |
+| `/api/sops` | `GET`, `POST` | GET: All, POST: Admin, Principal, HOD | Retrieve and manage standard operating procedures |
+| `/api/sops/:id` | `GET`, `PUT`, `DELETE` | GET: All, PUT/DELETE: Admin, Principal, HOD | Manage specific SOPs and their checklist steps |
+
 
 ---
 

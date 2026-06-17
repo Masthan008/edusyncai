@@ -4,7 +4,8 @@ import { api } from '../../../utils/api.js';
 import { useAuthStore } from '../../../store/authStore.js';
 import { 
   Sparkles, Award, Clock, BookOpen, Send, Loader2, Calendar, 
-  CheckCircle2, FileText, UploadCloud, TrendingUp, HelpCircle, AlertCircle
+  CheckCircle2, FileText, UploadCloud, TrendingUp, HelpCircle, AlertCircle,
+  Search, ClipboardList
 } from 'lucide-react';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts';
 
@@ -79,8 +80,13 @@ const DEFAULT_SUBMISSION_URL_PREFIX = 'http://school-storage.internal/uploads/';
 
 export default function StudentDashboard() {
   const location = useLocation();
-  const [activeTab, setActiveTab] = useState<'overview' | 'grades' | 'schedule' | 'assignments'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'grades' | 'schedule' | 'assignments' | 'sops'>('overview');
   const { profile } = useAuthStore();
+
+  const [sops, setSops] = useState<any[]>([]);
+  const [selectedSop, setSelectedSop] = useState<any | null>(null);
+  const [sopSearch, setSopSearch] = useState('');
+  const [sopCategoryFilter, setSopCategoryFilter] = useState('');
 
   // API states
   const [attendance, setAttendance] = useState<AttendanceData | null>(null);
@@ -208,6 +214,13 @@ export default function StudentDashboard() {
       fetchSchedule(signal);
       fetchAssignments(signal);
       fetchAiInsights(signal);
+
+      api.get('/sops', { signal }).then((res) => {
+        setSops(res.data.data);
+        if (res.data.data.length > 0) {
+          setSelectedSop(res.data.data[0]);
+        }
+      }).catch(() => {});
     }
 
     return () => {
@@ -217,7 +230,7 @@ export default function StudentDashboard() {
 
   useEffect(() => {
     if (location.state?.tab) {
-      setActiveTab(location.state.tab as 'overview' | 'grades' | 'schedule' | 'assignments');
+      setActiveTab(location.state.tab as 'overview' | 'grades' | 'schedule' | 'assignments' | 'sops');
     }
   }, [location.state?.tab]);
 
@@ -705,6 +718,115 @@ export default function StudentDashboard() {
               Select a pending assignment from the left roster to open the file submission panel.
             </div>
           )}
+        </div>
+      )}
+
+      {/* TAB CONTENT: SOPS */}
+      {activeTab === 'sops' && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start" id="tabpanel-sops" role="tabpanel" aria-label="SOP Guidelines">
+          {/* List */}
+          <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-3xl space-y-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <h2 className="text-lg font-bold">Procedural Guidelines</h2>
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                <div className="flex items-center gap-1.5 bg-slate-950 border border-slate-800 px-3 py-1.5 rounded-xl">
+                  <Search className="h-3.5 w-3.5 text-slate-500" />
+                  <input
+                    type="text"
+                    placeholder="Search Title..."
+                    value={sopSearch}
+                    onChange={(e) => setSopSearch(e.target.value)}
+                    className="bg-transparent border-none outline-none text-xs w-28 text-slate-200"
+                  />
+                </div>
+                <select
+                  value={sopCategoryFilter}
+                  onChange={(e) => setSopCategoryFilter(e.target.value)}
+                  className="bg-slate-950 border border-slate-800 rounded-xl p-1.5 outline-none text-xs text-slate-200"
+                >
+                  <option value="">All Categories</option>
+                  <option value="Admissions">Admissions</option>
+                  <option value="Academics">Academics</option>
+                  <option value="Finance">Finance</option>
+                  <option value="Operations">Operations</option>
+                  <option value="General">General</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Grid of SOPs */}
+            <div className="space-y-2.5 max-h-[500px] overflow-y-auto pr-1">
+              {sops
+                .filter((s) => !sopCategoryFilter || s.category === sopCategoryFilter)
+                .filter((s) => !sopSearch || s.title.toLowerCase().includes(sopSearch.toLowerCase()))
+                .map((sop) => (
+                  <button
+                    key={sop.id}
+                    onClick={() => setSelectedSop(sop)}
+                    className={`p-4 rounded-2xl text-left border transition w-full block ${
+                      selectedSop?.id === sop.id
+                        ? 'bg-cyan-500/10 border-cyan-500/40 shadow-lg shadow-cyan-500/5'
+                        : 'bg-slate-950/40 border-slate-800/80 hover:border-slate-700/60'
+                    }`}
+                  >
+                    <div className="flex justify-between items-start mb-1.5 gap-2">
+                      <span className="font-extrabold text-sm text-slate-200 block truncate">{sop.title}</span>
+                      <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-slate-800 text-cyan-400 border border-slate-700 shrink-0">
+                        {sop.category}
+                      </span>
+                    </div>
+                    <p className="text-slate-400 text-xs line-clamp-2 leading-relaxed">{sop.description || 'No description provided.'}</p>
+                  </button>
+                ))}
+            </div>
+          </div>
+
+          {/* Selected SOP Detail Pane */}
+          <div className="lg:col-span-2">
+            {selectedSop ? (
+              <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-3xl space-y-6">
+                <div className="border-b border-slate-800/80 pb-4">
+                  <div className="flex items-center gap-3">
+                    <h3 className="text-xl font-bold text-slate-100">{selectedSop.title}</h3>
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-cyan-950/60 text-cyan-400 border border-cyan-900">
+                      {selectedSop.category}
+                    </span>
+                  </div>
+                  <p className="text-slate-400 text-xs mt-1.5 leading-relaxed">{selectedSop.description}</p>
+                </div>
+
+                {/* Steps Checklist Vertical Timeline */}
+                <div className="space-y-4">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2">Checklist Steps</span>
+                  <div className="relative border-l border-slate-800 ml-4 pl-6 space-y-6">
+                    {selectedSop.steps.map((st: any, i: number) => (
+                      <div key={i} className="relative">
+                        {/* Timeline Bullet Point */}
+                        <div className="absolute -left-[35px] top-0.5 h-6 w-6 rounded-full bg-slate-900 border-2 border-cyan-500 flex items-center justify-center text-[10px] font-bold text-cyan-400 font-mono">
+                          {st.step}
+                        </div>
+                        <div className="space-y-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-bold text-sm text-slate-200">{st.title}</span>
+                            {st.role && (
+                              <span className="px-2 py-0.5 bg-slate-950 border border-slate-800 text-slate-400 font-mono text-[9px] rounded-md uppercase font-semibold">
+                                Owner: {st.role}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-slate-400 text-xs leading-relaxed">{st.description}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-slate-900/60 border border-slate-800 p-8 rounded-3xl text-center text-slate-500 text-xs italic">
+                Select an SOP guideline card from the list to view detailed steps.
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

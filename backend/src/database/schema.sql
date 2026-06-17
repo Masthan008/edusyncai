@@ -297,3 +297,25 @@ CREATE TRIGGER trg_users_updated_at
     BEFORE UPDATE ON users
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
+
+-- 21. sops (Standard Operating Procedures)
+CREATE TABLE IF NOT EXISTS sops (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    title VARCHAR(150) NOT NULL,
+    category VARCHAR(50) NOT NULL,
+    description TEXT,
+    steps JSONB NOT NULL,
+    created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_sops_category ON sops(category);
+
+-- Apply updated_at trigger to sops table
+DROP TRIGGER IF EXISTS trg_sops_updated_at ON sops;
+CREATE TRIGGER trg_sops_updated_at
+    BEFORE UPDATE ON sops
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+

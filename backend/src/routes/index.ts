@@ -11,6 +11,7 @@ import { timetableRouter } from './timetable.routes.js';
 import { analyticsRouter } from './analytics.routes.js';
 import { aiRouter } from './ai.routes.js';
 import { schoolRouter } from './school.routes.js';
+import { sopRouter } from './sop.routes.js';
 
 export const router = Router();
 
@@ -26,3 +27,5 @@ router.use('/timetables', timetableRouter);
 router.use('/analytics', analyticsRouter);
 router.use('/ai', aiRouter);
 router.use('/school', schoolRouter);
+router.use('/sops', sopRouter);
+

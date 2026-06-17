@@ -36,7 +36,7 @@ async function main() {
         assignment_submissions, assignments, grades, exams, 
         attendance_records, attendance, subjects, students, 
         sections, classes, parents, departments, teachers, 
-        users, roles, academic_years CASCADE
+        users, roles, academic_years, sops CASCADE
     `);
 
     // Insert Roles
@@ -115,7 +115,70 @@ async function main() {
     await pool.query("INSERT INTO subjects (name, code, department_id, credits) VALUES ('Geography', 'GEOG-101', $1, 3)", [humId]);
     await pool.query("INSERT INTO subjects (name, code, department_id, credits) VALUES ('Economics', 'ECON-101', $1, 3)", [humId]);
 
-    console.log('🎉 PostgreSQL Database successfully seeded with baseline roles, Admin user, departments, classes, sections, and subjects catalog!');
+    // Seed SOPs
+    console.log('🌱 Seeding Standard Operating Procedures (SOPs)...');
+    const sops = [
+      {
+        title: 'Student Enrollment Checklist',
+        category: 'Admissions',
+        description: 'Standard workflow steps to process and enroll a new student candidate into the academy.',
+        steps: JSON.stringify([
+          { step: 1, title: 'Application Submission', description: "Parent submits the online application form and child's birth certificate/transcripts.", role: 'Parent' },
+          { step: 2, title: 'Document Verification', description: 'Registrar reviews papers and assigns an entry assessment date.', role: 'Admin' },
+          { step: 3, title: 'Academic Assessment', description: 'Student candidate completes the entry test or academic interview.', role: 'Student' },
+          { step: 4, title: 'Board Approval', description: 'Admissions committee approves or rejects the candidate, generating the official offer letter.', role: 'Admin' },
+          { step: 5, title: 'ERP Setup & Billing', description: 'Administrator registers details in the ERP and generates tuition billing records.', role: 'Admin' }
+        ]),
+        created_by: adminUser.rows[0].id
+      },
+      {
+        title: 'Exam Grading & Progression',
+        category: 'Academics',
+        description: 'Operational workflow for preparing exams, entering student grades, and publishing report cards.',
+        steps: JSON.stringify([
+          { step: 1, title: 'Setup Grading Weights', description: 'Subject teacher creates the exam schedule and structures the grading parameters.', role: 'Teacher' },
+          { step: 2, title: 'Conduct Exams', description: 'Invigilators supervise assessment sessions and enforce compliance rules.', role: 'Teacher' },
+          { step: 3, title: 'Grade Entries', description: 'Teachers grade papers and log marks into the ERP within 7 days of the exam.', role: 'Teacher' },
+          { step: 4, title: 'HOD Review & Lock', description: 'Head of Department reviews and locks grades for all department subjects.', role: 'HOD' },
+          { step: 5, title: 'Report Card Release', description: 'Registrar publishes final report cards to Student and Parent portals.', role: 'Admin' }
+        ]),
+        created_by: adminUser.rows[0].id
+      },
+      {
+        title: 'Tuition Billing & Reminders',
+        category: 'Finance',
+        description: 'Instructions for billing fees, recording payments, and sending invoice reminders.',
+        steps: JSON.stringify([
+          { step: 1, title: 'Fee Template Setup', description: 'Accountant schedules fee structures at the start of the academic year.', role: 'Accountant' },
+          { step: 2, title: 'Invoice Dispatch', description: 'ERP system automatically issues digital invoices and bills parents.', role: 'Admin' },
+          { step: 3, title: 'Payment Submission', description: 'Parents execute online payment or submit bank transfer details.', role: 'Parent' },
+          { step: 4, title: 'Reconciliation & Receipt', description: 'Accountant reviews bank transfer references, verifies payment, and generates receipts.', role: 'Accountant' },
+          { step: 5, title: 'Delinquency Reminders', description: 'System initiates automated payment reminders after the fee grace period.', role: 'Admin' }
+        ]),
+        created_by: adminUser.rows[0].id
+      },
+      {
+        title: 'ERP Backup & Server Deployment',
+        category: 'Operations',
+        description: 'IT procedure for validating and compiling code, taking database backups, and deploying server builds.',
+        steps: JSON.stringify([
+          { step: 1, title: 'Code Integrity Test', description: 'Developers test updates and run backend/frontend compile checks.', role: 'Admin' },
+          { step: 2, title: 'Database Dump', description: 'Operator runs automated pg_dump scripts for nightly database backup.', role: 'Admin' },
+          { step: 3, title: 'Build Deployment', description: 'Push code to GitHub main branch to trigger CI/CD pipeline building processes.', role: 'Admin' },
+          { step: 4, title: 'Smoke Testing', description: 'Systems Administrator executes automated tests to confirm login and route latency.', role: 'Admin' }
+        ]),
+        created_by: adminUser.rows[0].id
+      }
+    ];
+
+    for (const sop of sops) {
+      await pool.query(
+        'INSERT INTO sops (title, category, description, steps, created_by) VALUES ($1, $2, $3, $4, $5)',
+        [sop.title, sop.category, sop.description, sop.steps, sop.created_by]
+      );
+    }
+
+    console.log('🎉 PostgreSQL Database successfully seeded with baseline roles, Admin user, departments, classes, sections, subjects, and SOPs!');
   } catch (error) {
     console.error('❌ Error seeding PostgreSQL database:', error);
   } finally {

@@ -175,3 +175,36 @@ export const registerSchema = z.object({
     phone: z.string().optional().or(z.literal('')),
   }),
 });
+
+export const sopCreateSchema = z.object({
+  body: z.object({
+    title: z.string().min(1, 'Title is required'),
+    category: z.string().min(1, 'Category is required'),
+    description: z.string().optional().nullable(),
+    steps: z.array(
+      z.object({
+        step: z.number().int().positive(),
+        title: z.string().min(1, 'Step title is required'),
+        description: z.string().optional().nullable(),
+        role: z.string().optional().nullable(),
+      })
+    ).min(1, 'At least one step is required'),
+  }),
+});
+
+export const sopUpdateSchema = z.object({
+  body: z.object({
+    title: z.string().optional(),
+    category: z.string().optional(),
+    description: z.string().optional().nullable(),
+    steps: z.array(
+      z.object({
+        step: z.number().int().positive(),
+        title: z.string().min(1, 'Step title is required'),
+        description: z.string().optional().nullable(),
+        role: z.string().optional().nullable(),
+      })
+    ).optional(),
+  }),
+});
+

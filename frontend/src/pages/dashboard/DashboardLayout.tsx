@@ -4,7 +4,7 @@ import { useAuthStore } from '../../store/authStore.js';
 import { 
   GraduationCap, LayoutDashboard, Users, BookOpen, Clock, 
   Landmark, Bell, LogOut, Menu, X, Sparkles, Building, CheckSquare, 
-  CalendarDays, Settings, ShieldAlert, Award
+  CalendarDays, Settings, ShieldAlert, Award, ClipboardList
 } from 'lucide-react';
 
 export default function DashboardLayout() {
@@ -26,6 +26,7 @@ export default function DashboardLayout() {
   const getNavigationForRole = (role: string) => {
     const common = [
       { tab: null, label: 'Dashboard', icon: <LayoutDashboard className="h-5 w-5" /> },
+      { tab: 'sops', label: 'SOP Guidelines', icon: <ClipboardList className="h-5 w-5" /> },
     ];
 
     switch (role) {
