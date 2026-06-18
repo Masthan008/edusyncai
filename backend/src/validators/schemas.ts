@@ -189,6 +189,16 @@ export const sopCreateSchema = z.object({
         role: z.string().optional().nullable(),
       })
     ).min(1, 'At least one step is required'),
+    title_ar: z.string().optional().nullable(),
+    description_ar: z.string().optional().nullable(),
+    steps_ar: z.array(
+      z.object({
+        step: z.number().int().positive(),
+        title: z.string().min(1, 'Step title is required'),
+        description: z.string().optional().nullable(),
+        role: z.string().optional().nullable(),
+      })
+    ).optional().nullable(),
   }),
 });
 
@@ -205,6 +215,16 @@ export const sopUpdateSchema = z.object({
         role: z.string().optional().nullable(),
       })
     ).optional(),
+    title_ar: z.string().optional().nullable(),
+    description_ar: z.string().optional().nullable(),
+    steps_ar: z.array(
+      z.object({
+        step: z.number().int().positive(),
+        title: z.string().min(1, 'Step title is required'),
+        description: z.string().optional().nullable(),
+        role: z.string().optional().nullable(),
+      })
+    ).optional().nullable(),
   }),
 });
 

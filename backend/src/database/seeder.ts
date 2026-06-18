@@ -129,6 +129,15 @@ async function main() {
           { step: 4, title: 'Board Approval', description: 'Admissions committee approves or rejects the candidate, generating the official offer letter.', role: 'Admin' },
           { step: 5, title: 'ERP Setup & Billing', description: 'Administrator registers details in the ERP and generates tuition billing records.', role: 'Admin' }
         ]),
+        title_ar: 'قائمة التحقق من تسجيل الطلاب',
+        description_ar: 'خطوات سير العمل الموحدة لمعالجة وتسجيل مرشح طالب جديد في الأكاديمية.',
+        steps_ar: JSON.stringify([
+          { step: 1, title: 'تقديم الطلب', description: 'يقدم ولي الأمر نموذج الطلب عبر الإنترنت وشهادة ميلاد الطفل/كشوف الدرجات.', role: 'Parent' },
+          { step: 2, title: 'التحقق من الوثائق', description: 'يراجع مسجل البيانات الأوراق ويحدد تاريخ تقييم الدخول.', role: 'Admin' },
+          { step: 3, title: 'التقييم الأكاديمي', description: 'يكمل المرشح الطالب اختبار الدخول أو المقابلة الأكاديمية.', role: 'Student' },
+          { step: 4, title: 'موافقة مجلس الإدارة', description: 'توافق لجنة القبول أو ترفض المرشح، مع توليد خطاب العرض الرسمي.', role: 'Admin' },
+          { step: 5, title: 'إعداد نظام تخطيط موارد المؤسسات والفوترة', description: 'يسجل المسؤول التفاصيل في نظام إدارة المؤسسة ويقوم بإنشاء سجلات فوترة الرسوم الدراسية.', role: 'Admin' }
+        ]),
         created_by: adminUser.rows[0].id
       },
       {
@@ -141,6 +150,15 @@ async function main() {
           { step: 3, title: 'Grade Entries', description: 'Teachers grade papers and log marks into the ERP within 7 days of the exam.', role: 'Teacher' },
           { step: 4, title: 'HOD Review & Lock', description: 'Head of Department reviews and locks grades for all department subjects.', role: 'HOD' },
           { step: 5, title: 'Report Card Release', description: 'Registrar publishes final report cards to Student and Parent portals.', role: 'Admin' }
+        ]),
+        title_ar: 'درجات الاختبار والتقدم',
+        description_ar: 'سير العمل التشغيلي لإعداد الامتحانات وإدخال درجات الطلاب ونشر الشهادات الدراسية.',
+        steps_ar: JSON.stringify([
+          { step: 1, title: 'إعداد أوزان الدرجات', description: 'يقوم معلم المادة بإنشاء جدول الامتحانات وتحديد معايير الدرجات.', role: 'Teacher' },
+          { step: 2, title: 'إجراء الامتحانات', description: 'يشرف المراقبون على جلسات التقييم ويفرضون قواعد الامتثال.', role: 'Teacher' },
+          { step: 3, title: 'رصد الدرجات', description: 'يقوم المعلمون بتصحيح الأوراق ورصد الدرجات في النظام خلال 7 أيام من الامتحان.', role: 'Teacher' },
+          { step: 4, title: 'مراجعة وقفل رئيس القسم', description: 'يراجع رئيس القسم الدرجات ويقفلها لجميع مواد القسم.', role: 'HOD' },
+          { step: 5, title: 'إصدار الشهادة', description: 'ينشر مسجل البيانات الشهادات الدراسية النهائية في بوابات الطلاب وأولياء الأمور.', role: 'Admin' }
         ]),
         created_by: adminUser.rows[0].id
       },
@@ -155,6 +173,15 @@ async function main() {
           { step: 4, title: 'Reconciliation & Receipt', description: 'Accountant reviews bank transfer references, verifies payment, and generates receipts.', role: 'Accountant' },
           { step: 5, title: 'Delinquency Reminders', description: 'System initiates automated payment reminders after the fee grace period.', role: 'Admin' }
         ]),
+        title_ar: 'فوترة الرسوم الدراسية والتذكيرات',
+        description_ar: 'تعليمات لفوترة الرسوم، وتسجيل المدفوعات، وإرسال تذكيرات الفواتير.',
+        steps_ar: JSON.stringify([
+          { step: 1, title: 'إعداد نموذج الرسوم', description: 'يحدد المحاسب هياكل الرسوم في بداية العام الدراسي.', role: 'Accountant' },
+          { step: 2, title: 'إرسال الفواتير', description: 'يصدر النظام تلقائيًا فواتير رقمية ويحاسب أولياء الأمور.', role: 'Admin' },
+          { step: 3, title: 'تقديم الدفع', description: 'يقوم أولياء الأمور بالدفع عبر الإنترنت أو تقديم تفاصيل التحويل المصرفي.', role: 'Parent' },
+          { step: 4, title: 'المطابقة والإيصال', description: 'يراجع المحاسب مراجع التحويل مصرفي، ويتحقق من الدفع، وينشئ الإيصالات.', role: 'Accountant' },
+          { step: 5, title: 'تذكيرات المتأخرات', description: 'يبدأ النظام تذكيرات دفع تلقائية بعد فترة السماح للرسوم.', role: 'Admin' }
+        ]),
         created_by: adminUser.rows[0].id
       },
       {
@@ -167,14 +194,22 @@ async function main() {
           { step: 3, title: 'Build Deployment', description: 'Push code to GitHub main branch to trigger CI/CD pipeline building processes.', role: 'Admin' },
           { step: 4, title: 'Smoke Testing', description: 'Systems Administrator executes automated tests to confirm login and route latency.', role: 'Admin' }
         ]),
+        title_ar: 'نسخ نظام ERP احتياطيًا ونشر الخادم',
+        description_ar: 'إجراء تكنولوجيا المعلومات للتحقق من الكود وتجميعه، وأخذ نسخ احتياطية لقاعدة البيانات، ونشر إصدارات الخادم.',
+        steps_ar: JSON.stringify([
+          { step: 1, title: 'اختبار سلامة الكود', description: 'يختبر المطورون التحديثات ويديرون فحوصات تجميع الواجهة الخلفية والأمامية.', role: 'Admin' },
+          { step: 2, title: 'نسخ قاعدة البيانات', description: 'يقوم المشغل بتشغيل نصوص pg_dump التلقائية للنسخ الاحتياطي اليومي لقاعدة البيانات.', role: 'Admin' },
+          { step: 3, title: 'نشر الإصدار', description: 'دفع الكود إلى فرع GitHub الرئيسي لبدء عمليات بناء خط أنابيب CI/CD.', role: 'Admin' },
+          { step: 4, title: 'اختبار الدخان / الفحص الأولي', description: 'ينفذ مسؤول الأنظمة اختبارات تلقائية لتأكيد الدخول وزمن استجابة المسار.', role: 'Admin' }
+        ]),
         created_by: adminUser.rows[0].id
       }
     ];
 
     for (const sop of sops) {
       await pool.query(
-        'INSERT INTO sops (title, category, description, steps, created_by) VALUES ($1, $2, $3, $4, $5)',
-        [sop.title, sop.category, sop.description, sop.steps, sop.created_by]
+        'INSERT INTO sops (title, category, description, steps, created_by, title_ar, description_ar, steps_ar) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
+        [sop.title, sop.category, sop.description, sop.steps, sop.created_by, sop.title_ar, sop.description_ar, sop.steps_ar]
       );
     }
 

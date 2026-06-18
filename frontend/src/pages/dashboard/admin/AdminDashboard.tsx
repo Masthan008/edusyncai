@@ -200,6 +200,9 @@ interface SopFormState {
   category: string;
   description: string;
   steps: SopStep[];
+  title_ar: string;
+  description_ar: string;
+  steps_ar: SopStep[];
 }
 
 type TabId = 'overview' | 'students' | 'teachers' | 'departments' | 'timetables' | 'billing' | 'sops';
@@ -219,6 +222,9 @@ const DEFAULT_SOP_FORM: SopFormState = {
   category: 'General',
   description: '',
   steps: [{ step: 1, title: '', description: '', role: 'Admin' }],
+  title_ar: '',
+  description_ar: '',
+  steps_ar: [{ step: 1, title: '', description: '', role: 'Admin' }],
 };
 
 const COLORS = ['#06b6d4', '#3b82f6', '#f59e0b', '#ef4444'];
@@ -282,6 +288,8 @@ function AdminDashboard() {
   const [sopCategoryFilter, setSopCategoryFilter] = useState('');
   const [sopForm, setSopForm] = useState<SopFormState>(DEFAULT_SOP_FORM);
   const [editingSop, setEditingSop] = useState<any | null>(null);
+  const [translating, setTranslating] = useState(false);
+  const [sopLang, setSopLang] = useState<'en' | 'ar'>('en');
 
   const [studentSearch, setStudentSearch] = useState('');
   const [classFilter, setClassFilter] = useState('');
@@ -541,6 +549,32 @@ function AdminDashboard() {
       setLoading(false);
     }
   }, [feeForm, editingFee, addNotification]);
+
+  const handleAutoTranslate = useCallback(async () => {
+    if (!sopForm.title) return;
+    setTranslating(true);
+    try {
+      const res = await api.post('/sops/translate', {
+        title: sopForm.title,
+        description: sopForm.description,
+        steps: sopForm.steps,
+      });
+      if (res.data.success && res.data.data) {
+        const { title_ar, description_ar, steps_ar } = res.data.data;
+        setSopForm(prev => ({
+          ...prev,
+          title_ar: title_ar || '',
+          description_ar: description_ar || '',
+          steps_ar: Array.isArray(steps_ar) ? steps_ar : prev.steps_ar,
+        }));
+        addNotification('success', 'Checklist auto-translated to Arabic successfully!');
+      }
+    } catch {
+      addNotification('error', 'Translation failed. Please enter fields manually.');
+    } finally {
+      setTranslating(false);
+    }
+  }, [sopForm.title, sopForm.description, sopForm.steps, addNotification]);
 
   const handleSopSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -2156,7 +2190,8 @@ function AdminDashboard() {
                     type="button"
                     onClick={() => {
                       const newSteps = [...sopForm.steps, { step: sopForm.steps.length + 1, title: '', description: '', role: 'Admin' }];
-                      setSopForm({ ...sopForm, steps: newSteps });
+                      const newStepsAr = [...sopForm.steps_ar, { step: sopForm.steps_ar.length + 1, title: '', description: '', role: 'Admin' }];
+                      setSopForm({ ...sopForm, steps: newSteps, steps_ar: newStepsAr });
                     }}
                     className="text-[10px] text-cyan-400 hover:text-cyan-300 font-bold hover:underline transition"
                   >
@@ -2174,7 +2209,8 @@ function AdminDashboard() {
                             type="button"
                             onClick={() => {
                               const filtered = sopForm.steps.filter((_, idx) => idx !== i).map((item, idx) => ({ ...item, step: idx + 1 }));
-                              setSopForm({ ...sopForm, steps: filtered });
+                              const filteredAr = sopForm.steps_ar.filter((_, idx) => idx !== i).map((item, idx) => ({ ...item, step: idx + 1 }));
+                              setSopForm({ ...sopForm, steps: filtered, steps_ar: filteredAr });
                             }}
                             className="text-[10px] text-rose-400 hover:text-rose-300 transition"
                           >
@@ -2209,7 +2245,11 @@ function AdminDashboard() {
                         onChange={(e) => {
                           const updated = [...sopForm.steps];
                           updated[i].role = e.target.value;
-                          setSopForm({ ...sopForm, steps: updated });
+                          const updatedAr = [...sopForm.steps_ar];
+                          if (updatedAr[i]) {
+                            updatedAr[i].role = e.target.value;
+                          }
+                          setSopForm({ ...sopForm, steps: updated, steps_ar: updatedAr });
                         }}
                         className="w-full bg-slate-900 border border-slate-800 rounded-lg p-1.5 outline-none text-[11px] text-slate-400"
                       >
@@ -2223,6 +2263,84 @@ function AdminDashboard() {
                       </select>
                     </div>
                   ))}
+                </div>
+              </div>
+
+              {/* Arabic Translation Fields */}
+              <div className="border border-slate-850 rounded-2xl p-4 space-y-3 bg-slate-950/20">
+                <div className="flex justify-between items-center border-b border-slate-800 pb-2">
+                  <span className="font-extrabold text-[10px] uppercase tracking-wider text-slate-300">Arabic Translation (العربية)</span>
+                  <button
+                    type="button"
+                    onClick={handleAutoTranslate}
+                    disabled={translating || !sopForm.title}
+                    className="px-2.5 py-1 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 font-bold rounded-lg text-[9px] transition flex items-center gap-1 shadow-md disabled:opacity-50"
+                  >
+                    {translating ? 'Translating...' : 'Auto-Translate 🌐'}
+                  </button>
+                </div>
+                
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-slate-400 font-semibold block mb-1 text-[11px]">SOP Title (Arabic)</label>
+                    <input
+                      type="text"
+                      value={sopForm.title_ar}
+                      onChange={(e) => setSopForm({ ...sopForm, title_ar: e.target.value })}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 outline-none focus:border-cyan-500 text-xs text-right text-slate-200"
+                      placeholder="العنوان باللغة العربية"
+                      dir="rtl"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-slate-400 font-semibold block mb-1 text-[11px]">Description (Arabic)</label>
+                    <textarea
+                      value={sopForm.description_ar}
+                      onChange={(e) => setSopForm({ ...sopForm, description_ar: e.target.value })}
+                      rows={2}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 outline-none focus:border-cyan-500 text-xs text-right text-slate-300 font-sans"
+                      placeholder="الوصف باللغة العربية..."
+                      dir="rtl"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <span className="text-slate-400 font-bold block text-[10px] uppercase tracking-wider">Checklist Steps (Arabic)</span>
+                    <div className="space-y-2 max-h-40 overflow-y-auto pr-0.5">
+                      {sopForm.steps_ar.map((st, i) => (
+                        <div key={i} className="p-2.5 bg-slate-900 border border-slate-850 rounded-xl space-y-1.5">
+                          <div className="flex justify-between items-center border-b border-slate-850 pb-1">
+                            <span className="font-bold text-[9px] text-cyan-500 font-mono">الخطوة {st.step}</span>
+                          </div>
+                          <input
+                            type="text"
+                            placeholder="عنوان الخطوة بالعربية"
+                            value={st.title}
+                            onChange={(e) => {
+                              const updated = [...sopForm.steps_ar];
+                              updated[i].title = e.target.value;
+                              setSopForm({ ...sopForm, steps_ar: updated });
+                            }}
+                            className="w-full bg-slate-950 border border-slate-800 rounded-lg p-1.5 outline-none text-xs text-slate-200 text-right"
+                            dir="rtl"
+                          />
+                          <input
+                            type="text"
+                            placeholder="وصف الخطوة بالعربية"
+                            value={st.description || ''}
+                            onChange={(e) => {
+                              const updated = [...sopForm.steps_ar];
+                              updated[i].description = e.target.value;
+                              setSopForm({ ...sopForm, steps_ar: updated });
+                            }}
+                            className="w-full bg-slate-950 border border-slate-800 rounded-lg p-1.5 outline-none text-[11px] text-slate-300 text-right"
+                            dir="rtl"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -2310,18 +2428,43 @@ function AdminDashboard() {
 
             {/* Selected SOP Detail Pane */}
             {selectedSop ? (
-              <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-3xl space-y-6">
-                <div className="flex justify-between items-start border-b border-slate-800/80 pb-4">
-                  <div>
-                    <div className="flex items-center gap-3">
-                      <h3 className="text-xl font-bold text-slate-100">{selectedSop.title}</h3>
+              <div 
+                className="bg-slate-900/60 border border-slate-800 p-6 rounded-3xl space-y-6 transition-all duration-300"
+                dir={sopLang === 'ar' ? 'rtl' : 'ltr'}
+              >
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-800/80 pb-4 gap-4">
+                  <div className="space-y-1.5 flex-1">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <h3 className="text-xl font-bold text-slate-100">
+                        {sopLang === 'ar' ? (selectedSop.title_ar || selectedSop.title) : selectedSop.title}
+                      </h3>
                       <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-cyan-950/60 text-cyan-400 border border-cyan-900">
                         {selectedSop.category}
                       </span>
                     </div>
-                    <p className="text-slate-400 text-xs mt-1.5 leading-relaxed">{selectedSop.description}</p>
+                    <p className="text-slate-400 text-xs leading-relaxed">
+                      {sopLang === 'ar' ? (selectedSop.description_ar || selectedSop.description) : selectedSop.description}
+                    </p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className={`flex flex-wrap items-center gap-3 shrink-0 ${sopLang === 'ar' ? 'sm:flex-row-reverse' : ''}`}>
+                    {/* EN/AR Language Switcher */}
+                    <div className="flex bg-slate-950 p-1 border border-slate-850 rounded-xl shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setSopLang('en')}
+                        className={`px-2.5 py-1 rounded-lg text-[10px] font-extrabold transition ${sopLang === 'en' ? 'bg-cyan-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-slate-200'}`}
+                      >
+                        EN
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSopLang('ar')}
+                        className={`px-2.5 py-1 rounded-lg text-[10px] font-extrabold transition ${sopLang === 'ar' ? 'bg-cyan-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-slate-200'}`}
+                      >
+                        AR
+                      </button>
+                    </div>
+
                     <button
                       onClick={() => {
                         setEditingSop(selectedSop);
@@ -2330,9 +2473,12 @@ function AdminDashboard() {
                           category: selectedSop.category,
                           description: selectedSop.description || '',
                           steps: selectedSop.steps,
+                          title_ar: selectedSop.title_ar || '',
+                          description_ar: selectedSop.description_ar || '',
+                          steps_ar: selectedSop.steps_ar || selectedSop.steps.map((s: any) => ({ step: s.step, title: '', description: '', role: s.role })),
                         });
                       }}
-                      className="px-3 py-1.5 bg-slate-850 hover:bg-slate-800 border border-slate-800 text-cyan-400 hover:text-cyan-300 font-bold rounded-xl text-xs transition"
+                      className="px-3 py-1.5 bg-slate-850 hover:bg-slate-800 border border-slate-800 text-cyan-400 hover:text-cyan-300 font-bold rounded-xl text-xs transition shrink-0"
                     >
                       Edit
                     </button>
@@ -2343,7 +2489,7 @@ function AdminDashboard() {
                           onConfirm: () => handleSopDelete(selectedSop.id),
                         });
                       }}
-                      className="p-1.5 bg-slate-950 border border-slate-800/80 text-rose-400 hover:text-rose-300 hover:bg-rose-950/20 rounded-xl transition"
+                      className="p-1.5 bg-slate-950 border border-slate-800/80 text-rose-400 hover:text-rose-300 hover:bg-rose-950/20 rounded-xl transition shrink-0"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
@@ -2352,24 +2498,26 @@ function AdminDashboard() {
 
                 {/* Steps Checklist Vertical Timeline */}
                 <div className="space-y-4">
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2">Checklist Steps</span>
-                  <div className="relative border-l border-slate-800 ml-4 pl-6 space-y-6">
-                    {selectedSop.steps.map((st: any, i: number) => (
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2">
+                    {sopLang === 'ar' ? 'خطوات قائمة التحقق' : 'Checklist Steps'}
+                  </span>
+                  <div className={`relative border-slate-850 space-y-6 ${sopLang === 'ar' ? 'border-r mr-4 pr-6 text-right' : 'border-l ml-4 pl-6 text-left'}`}>
+                    {((sopLang === 'ar' ? selectedSop.steps_ar : null) || selectedSop.steps).map((st: any, i: number) => (
                       <div key={i} className="relative">
                         {/* Timeline Bullet Point */}
-                        <div className="absolute -left-[35px] top-0.5 h-6 w-6 rounded-full bg-slate-900 border-2 border-cyan-500 flex items-center justify-center text-[10px] font-bold text-cyan-400 font-mono">
+                        <div className={`absolute top-0.5 h-6 w-6 rounded-full bg-slate-900 border-2 border-cyan-500 flex items-center justify-center text-[10px] font-bold text-cyan-400 font-mono ${sopLang === 'ar' ? '-right-[35px]' : '-left-[35px]'}`}>
                           {st.step}
                         </div>
                         <div className="space-y-1">
-                          <div className="flex flex-wrap items-center gap-2">
+                          <div className={`flex flex-wrap items-center gap-2 ${sopLang === 'ar' ? 'justify-start' : ''}`}>
                             <span className="font-bold text-sm text-slate-200">{st.title}</span>
                             {st.role && (
                               <span className="px-2 py-0.5 bg-slate-950 border border-slate-800 text-slate-400 font-mono text-[9px] rounded-md uppercase font-semibold">
-                                Owner: {st.role}
+                                {sopLang === 'ar' ? `المالك: ${st.role}` : `Owner: ${st.role}`}
                               </span>
                             )}
                           </div>
-                          <p className="text-slate-400 text-xs leading-relaxed">{st.description}</p>
+                          <p className="text-slate-400 text-xs leading-relaxed">{st.description || (sopLang === 'ar' ? 'لا يوجد وصف.' : 'No description.')}</p>
                         </div>
                       </div>
                     ))}

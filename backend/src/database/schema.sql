@@ -305,6 +305,9 @@ CREATE TABLE IF NOT EXISTS sops (
     category VARCHAR(50) NOT NULL,
     description TEXT,
     steps JSONB NOT NULL,
+    title_ar VARCHAR(150),
+    description_ar TEXT,
+    steps_ar JSONB,
     created_by UUID REFERENCES users(id) ON DELETE SET NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP

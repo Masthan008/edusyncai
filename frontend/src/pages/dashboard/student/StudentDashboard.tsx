@@ -87,6 +87,7 @@ export default function StudentDashboard() {
   const [selectedSop, setSelectedSop] = useState<any | null>(null);
   const [sopSearch, setSopSearch] = useState('');
   const [sopCategoryFilter, setSopCategoryFilter] = useState('');
+  const [sopLang, setSopLang] = useState<'en' | 'ar'>('en');
 
   // API states
   const [attendance, setAttendance] = useState<AttendanceData | null>(null);
@@ -784,37 +785,66 @@ export default function StudentDashboard() {
           {/* Selected SOP Detail Pane */}
           <div className="lg:col-span-2">
             {selectedSop ? (
-              <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-3xl space-y-6">
-                <div className="border-b border-slate-800/80 pb-4">
-                  <div className="flex items-center gap-3">
-                    <h3 className="text-xl font-bold text-slate-100">{selectedSop.title}</h3>
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-cyan-950/60 text-cyan-400 border border-cyan-900">
-                      {selectedSop.category}
-                    </span>
+              <div 
+                className="bg-slate-900/60 border border-slate-800 p-6 rounded-3xl space-y-6 transition-all duration-300"
+                dir={sopLang === 'ar' ? 'rtl' : 'ltr'}
+              >
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-800/80 pb-4 gap-4">
+                  <div className="space-y-1.5 flex-1">
+                    <div className="flex items-center gap-3">
+                      <h3 className="text-xl font-bold text-slate-100">
+                        {sopLang === 'ar' ? (selectedSop.title_ar || selectedSop.title) : selectedSop.title}
+                      </h3>
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-cyan-950/60 text-cyan-400 border border-cyan-900">
+                        {selectedSop.category}
+                      </span>
+                    </div>
+                    <p className="text-slate-400 text-xs leading-relaxed">
+                      {sopLang === 'ar' ? (selectedSop.description_ar || selectedSop.description) : selectedSop.description}
+                    </p>
                   </div>
-                  <p className="text-slate-400 text-xs mt-1.5 leading-relaxed">{selectedSop.description}</p>
+                  
+                  {/* Language Switcher */}
+                  <div className="flex bg-slate-950 p-1 border border-slate-850 rounded-xl shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setSopLang('en')}
+                      className={`px-2.5 py-1 rounded-lg text-[10px] font-extrabold transition ${sopLang === 'en' ? 'bg-cyan-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-slate-200'}`}
+                    >
+                      EN
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSopLang('ar')}
+                      className={`px-2.5 py-1 rounded-lg text-[10px] font-extrabold transition ${sopLang === 'ar' ? 'bg-cyan-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-slate-200'}`}
+                    >
+                      AR
+                    </button>
+                  </div>
                 </div>
 
                 {/* Steps Checklist Vertical Timeline */}
                 <div className="space-y-4">
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2">Checklist Steps</span>
-                  <div className="relative border-l border-slate-800 ml-4 pl-6 space-y-6">
-                    {selectedSop.steps.map((st: any, i: number) => (
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2">
+                    {sopLang === 'ar' ? 'خطوات قائمة التحقق' : 'Checklist Steps'}
+                  </span>
+                  <div className={`relative border-slate-850 space-y-6 ${sopLang === 'ar' ? 'border-r mr-4 pr-6 text-right' : 'border-l ml-4 pl-6 text-left'}`}>
+                    {((sopLang === 'ar' ? selectedSop.steps_ar : null) || selectedSop.steps).map((st: any, i: number) => (
                       <div key={i} className="relative">
                         {/* Timeline Bullet Point */}
-                        <div className="absolute -left-[35px] top-0.5 h-6 w-6 rounded-full bg-slate-900 border-2 border-cyan-500 flex items-center justify-center text-[10px] font-bold text-cyan-400 font-mono">
+                        <div className={`absolute top-0.5 h-6 w-6 rounded-full bg-slate-900 border-2 border-cyan-500 flex items-center justify-center text-[10px] font-bold text-cyan-400 font-mono ${sopLang === 'ar' ? '-right-[35px]' : '-left-[35px]'}`}>
                           {st.step}
                         </div>
                         <div className="space-y-1">
-                          <div className="flex flex-wrap items-center gap-2">
+                          <div className={`flex flex-wrap items-center gap-2 ${sopLang === 'ar' ? 'justify-start' : ''}`}>
                             <span className="font-bold text-sm text-slate-200">{st.title}</span>
                             {st.role && (
                               <span className="px-2 py-0.5 bg-slate-950 border border-slate-800 text-slate-400 font-mono text-[9px] rounded-md uppercase font-semibold">
-                                Owner: {st.role}
+                                {sopLang === 'ar' ? `المالك: ${st.role}` : `Owner: ${st.role}`}
                               </span>
                             )}
                           </div>
-                          <p className="text-slate-400 text-xs leading-relaxed">{st.description}</p>
+                          <p className="text-slate-400 text-xs leading-relaxed">{st.description || (sopLang === 'ar' ? 'لا يوجد وصف.' : 'No description.')}</p>
                         </div>
                       </div>
                     ))}

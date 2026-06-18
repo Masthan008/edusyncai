@@ -93,6 +93,15 @@ export const mockDb: any = {
         { step: 4, title: 'Board Approval', description: 'Admissions committee approves or rejects the candidate, generating the official offer letter.', role: 'Admin' },
         { step: 5, title: 'ERP Setup & Billing', description: 'Administrator registers details in the ERP and generates tuition billing records.', role: 'Admin' }
       ],
+      title_ar: 'قائمة التحقق من تسجيل الطلاب',
+      description_ar: 'خطوات سير العمل الموحدة لمعالجة وتسجيل مرشح طالب جديد في الأكاديمية.',
+      steps_ar: [
+        { step: 1, title: 'تقديم الطلب', description: 'يقدم ولي الأمر نموذج الطلب عبر الإنترنت وشهادة ميلاد الطفل/كشوف الدرجات.', role: 'Parent' },
+        { step: 2, title: 'التحقق من الوثائق', description: 'يراجع مسجل البيانات الأوراق ويحدد تاريخ تقييم الدخول.', role: 'Admin' },
+        { step: 3, title: 'التقييم الأكاديمي', description: 'يكمل المرشح الطالب اختبار الدخول أو المقابلة الأكاديمية.', role: 'Student' },
+        { step: 4, title: 'موافقة مجلس الإدارة', description: 'توافق لجنة القبول أو ترفض المرشح، مع توليد خطاب العرض الرسمي.', role: 'Admin' },
+        { step: 5, title: 'إعداد نظام تخطيط موارد المؤسسات والفوترة', description: 'يسجل المسؤول التفاصيل في نظام إدارة المؤسسة ويقوم بإنشاء سجلات فوترة الرسوم الدراسية.', role: 'Admin' }
+      ],
       created_by: 'user-admin-1',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
@@ -108,6 +117,15 @@ export const mockDb: any = {
         { step: 3, title: 'Grade Entries', description: 'Teachers grade papers and log marks into the ERP within 7 days of the exam.', role: 'Teacher' },
         { step: 4, title: 'HOD Review & Lock', description: 'Head of Department reviews and locks grades for all department subjects.', role: 'HOD' },
         { step: 5, title: 'Report Card Release', description: 'Registrar publishes final report cards to Student and Parent portals.', role: 'Admin' }
+      ],
+      title_ar: 'درجات الاختبار والتقدم',
+      description_ar: 'سير العمل التشغيلي لإعداد الامتحانات وإدخال درجات الطلاب ونشر الشهادات الدراسية.',
+      steps_ar: [
+        { step: 1, title: 'إعداد أوزان الدرجات', description: 'يقوم معلم المادة بإنشاء جدول الامتحانات وتحديد معايير الدرجات.', role: 'Teacher' },
+        { step: 2, title: 'إجراء الامتحانات', description: 'يشرف المراقبون على جلسات التقييم ويفرضون قواعد الامتثال.', role: 'Teacher' },
+        { step: 3, title: 'رصد الدرجات', description: 'يقوم المعلمون بتصحيح الأوراق ورصد الدرجات في النظام خلال 7 أيام من الامتحان.', role: 'Teacher' },
+        { step: 4, title: 'مراجعة وقفل رئيس القسم', description: 'يراجع رئيس القسم الدرجات ويقفلها لجميع مواد القسم.', role: 'HOD' },
+        { step: 5, title: 'إصدار الشهادة', description: 'ينشر مسجل البيانات الشهادات الدراسية النهائية في بوابات الطلاب وأولياء الأمور.', role: 'Admin' }
       ],
       created_by: 'user-admin-1',
       created_at: new Date().toISOString(),
@@ -125,6 +143,15 @@ export const mockDb: any = {
         { step: 4, title: 'Reconciliation & Receipt', description: 'Accountant reviews bank transfer references, verifies payment, and generates receipts.', role: 'Accountant' },
         { step: 5, title: 'Delinquency Reminders', description: 'System initiates automated payment reminders after the fee grace period.', role: 'Admin' }
       ],
+      title_ar: 'فوترة الرسوم الدراسية والتذكيرات',
+      description_ar: 'تعليمات لفوترة الرسوم، وتسجيل المدفوعات، وإرسال تذكيرات الفواتير.',
+      steps_ar: [
+        { step: 1, title: 'إعداد نموذج الرسوم', description: 'يحدد المحاسب هياكل الرسوم في بداية العام الدراسي.', role: 'Accountant' },
+        { step: 2, title: 'إرسال الفواتير', description: 'يصدر النظام تلقائيًا فواتير رقمية ويحاسب أولياء الأمور.', role: 'Admin' },
+        { step: 3, title: 'تقديم الدفع', description: 'يقوم أولياء الأمور بالدفع عبر الإنترنت أو تقديم تفاصيل التحويل المصرفي.', role: 'Parent' },
+        { step: 4, title: 'المطابقة والإيصال', description: 'يراجع المحاسب مراجع التحويل المصرفي، ويتحقق من الدفع، وينشئ الإيصالات.', role: 'Accountant' },
+        { step: 5, title: 'تذكيرات المتأخرات', description: 'يبدأ النظام تذكيرات دفع تلقائية بعد فترة السماح للرسوم.', role: 'Admin' }
+      ],
       created_by: 'user-admin-1',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
@@ -139,6 +166,14 @@ export const mockDb: any = {
         { step: 2, title: 'Database Dump', description: 'Operator runs automated pg_dump scripts for nightly database backup.', role: 'Admin' },
         { step: 3, title: 'Build Deployment', description: 'Push code to GitHub main branch to trigger CI/CD pipeline building processes.', role: 'Admin' },
         { step: 4, title: 'Smoke Testing', description: 'Systems Administrator executes automated tests to confirm login and route latency.', role: 'Admin' }
+      ],
+      title_ar: 'نسخ نظام ERP احتياطيًا ونشر الخادم',
+      description_ar: 'إجراء تكنولوجيا المعلومات للتحقق من الكود وتجميعه، وأخذ نسخ احتياطية لقاعدة البيانات، ونشر إصدارات الخادم.',
+      steps_ar: [
+        { step: 1, title: 'اختبار سلامة الكود', description: 'يختبر المطورون التحديثات ويديرون فحوصات تجميع الواجهة الخلفية والأمامية.', role: 'Admin' },
+        { step: 2, title: 'نسخ قاعدة البيانات', description: 'يقوم المشغل بتشغيل نصوص pg_dump التلقائية للنسخ الاحتياطي اليومي لقاعدة البيانات.', role: 'Admin' },
+        { step: 3, title: 'نشر الإصدار', description: 'دفع الكود إلى فرع GitHub الرئيسي لبدء عمليات بناء خط أنابيب CI/CD.', role: 'Admin' },
+        { step: 4, title: 'اختبار الدخان / الفحص الأولي', description: 'ينفذ مسؤول الأنظمة اختبارات تلقائية لتأكيد الدخول وزمن استجابة المسار.', role: 'Admin' }
       ],
       created_by: 'user-admin-1',
       created_at: new Date().toISOString(),
@@ -517,13 +552,21 @@ export const query = async (text: string, params: any[] = []): Promise<{ rows: a
   }
 
   if (q.startsWith('INSERT INTO sops')) {
-    const [title, category, description, steps, created_by] = params;
+    let title, category, description, steps, created_by, title_ar, description_ar, steps_ar;
+    if (params.length >= 8) {
+      [title, category, description, steps, created_by, title_ar, description_ar, steps_ar] = params;
+    } else {
+      [title, category, description, steps, created_by] = params;
+    }
     const newSop = {
       id: `sop-${Date.now()}`,
       title,
       category,
       description: description || null,
       steps: typeof steps === 'string' ? JSON.parse(steps) : steps,
+      title_ar: title_ar || null,
+      description_ar: description_ar || null,
+      steps_ar: steps_ar ? (typeof steps_ar === 'string' ? JSON.parse(steps_ar) : steps_ar) : null,
       created_by: created_by || null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
@@ -538,13 +581,23 @@ export const query = async (text: string, params: any[] = []): Promise<{ rows: a
     if (index === -1) {
       return { rows: [], rowCount: 0 };
     }
-    const [title, category, description, steps] = params;
+    
+    let title, category, description, steps, title_ar, description_ar, steps_ar;
+    if (params.length >= 8) {
+      [title, category, description, steps, title_ar, description_ar, steps_ar] = params;
+    } else {
+      [title, category, description, steps] = params;
+    }
+
     mockDb.sops[index] = {
       ...mockDb.sops[index],
       title: title !== undefined ? title : mockDb.sops[index].title,
       category: category !== undefined ? category : mockDb.sops[index].category,
       description: description !== undefined ? description : mockDb.sops[index].description,
       steps: steps !== undefined ? (typeof steps === 'string' ? JSON.parse(steps) : steps) : mockDb.sops[index].steps,
+      title_ar: title_ar !== undefined ? title_ar : mockDb.sops[index].title_ar,
+      description_ar: description_ar !== undefined ? description_ar : mockDb.sops[index].description_ar,
+      steps_ar: steps_ar !== undefined ? (typeof steps_ar === 'string' ? JSON.parse(steps_ar) : steps_ar) : mockDb.sops[index].steps_ar,
       updated_at: new Date().toISOString()
     };
     return { rows: [mockDb.sops[index]], rowCount: 1 };
