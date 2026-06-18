@@ -86,9 +86,15 @@ export default function DashboardLayout() {
   const navItems = getNavigationForRole(user?.role || 'Student');
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white flex flex-col font-sans">
+    <div className="min-h-screen bg-slate-950 text-slate-800 flex flex-col font-sans relative overflow-hidden">
+      {/* Liquid Glass Background Blobs */}
+      <div className="absolute top-[-10%] left-[-10%] w-[600px] h-[600px] rounded-full bg-gradient-to-tr from-sky-200/40 to-indigo-200/40 blur-[100px] animate-blob pointer-events-none z-0" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] rounded-full bg-gradient-to-tr from-pink-200/35 to-purple-200/35 blur-[100px] animate-blob animation-delay-2000 pointer-events-none z-0" />
+      <div className="absolute top-[35%] left-[25%] w-[450px] h-[450px] rounded-full bg-gradient-to-tr from-teal-100/30 to-cyan-200/40 blur-[90px] animate-blob animation-delay-4000 pointer-events-none z-0" />
+
       {/* Top Navbar */}
-      <header className="h-16 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-6 sticky top-0 z-40">
+      <header className="h-16 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-6 sticky top-0 z-40 relative">
+
         <div className="flex items-center gap-4">
           <button 
             onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -224,7 +230,7 @@ export default function DashboardLayout() {
         )}
 
         {/* Main Content Workspace */}
-        <main className="flex-1 p-6 md:p-8 overflow-y-auto max-w-full">
+        <main className="flex-1 p-6 md:p-8 overflow-y-auto max-w-full relative z-10">
           <div className="max-w-7xl mx-auto space-y-6">
             <Outlet />
           </div>

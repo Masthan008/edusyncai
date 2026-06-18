@@ -121,7 +121,12 @@ export default function LandingPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-900 text-white font-sans overflow-x-hidden">
+    <div className="min-h-screen bg-slate-950 text-slate-800 font-sans overflow-x-hidden relative">
+      {/* Liquid Glass Background Blobs */}
+      <div className="absolute top-[-5%] left-[-10%] w-[700px] h-[700px] rounded-full bg-gradient-to-tr from-sky-200/40 to-indigo-200/40 blur-[120px] animate-blob pointer-events-none z-0" />
+      <div className="absolute bottom-[-5%] right-[-10%] w-[600px] h-[600px] rounded-full bg-gradient-to-tr from-pink-200/35 to-purple-200/35 blur-[120px] animate-blob animation-delay-2000 pointer-events-none z-0" />
+      <div className="absolute top-[40%] left-[20%] w-[500px] h-[500px] rounded-full bg-gradient-to-tr from-teal-100/30 to-cyan-200/40 blur-[100px] animate-blob animation-delay-4000 pointer-events-none z-0" />
+
       {/* Navigation Header */}
       <header className="sticky top-0 z-50 bg-slate-900/80 backdrop-blur-md border-b border-slate-800 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">

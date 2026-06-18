@@ -36,9 +36,11 @@ export default function LoginPage() {
 
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white flex flex-col justify-center items-center px-4 relative overflow-hidden font-sans">
-      {/* Background radial highlight */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[500px] w-[500px] bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
+    <div className="min-h-screen bg-slate-950 text-slate-800 flex flex-col justify-center items-center px-4 relative overflow-hidden font-sans">
+      {/* Liquid Glass Background Blobs */}
+      <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full bg-gradient-to-tr from-sky-200/40 to-indigo-200/40 blur-[100px] animate-blob pointer-events-none z-0" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[450px] h-[450px] rounded-full bg-gradient-to-tr from-pink-200/35 to-purple-200/35 blur-[100px] animate-blob animation-delay-2000 pointer-events-none z-0" />
+      <div className="absolute top-[35%] left-[25%] w-[400px] h-[400px] rounded-full bg-gradient-to-tr from-teal-100/30 to-cyan-200/40 blur-[90px] animate-blob animation-delay-4000 pointer-events-none z-0" />
 
       <div className="w-full max-w-md space-y-8 z-10">
         {/* Top Logo */}
