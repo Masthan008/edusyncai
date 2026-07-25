@@ -4,7 +4,7 @@
 
 @layer base {
   body {
-    @apply font-sans bg-slate-50 text-slate-800;
+    @apply font-sans bg-slate-50 text-slate-800 antialiased selection:bg-emerald-500 selection:text-white;
   }
 }
 
@@ -34,147 +34,131 @@
   animation-delay: 4s;
 }
 
-/* Glassmorphic panel definitions */
+/* Glassmorphic panel definitions - Pure White Light Glass with Green & Blue Highlights */
 .glass-panel {
-  background: rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.85) !important;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.7);
-  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.04);
+  border: 1px solid rgba(226, 232, 240, 0.9) !important;
+  box-shadow: 0 10px 30px -5px rgba(16, 185, 129, 0.05), 0 4px 12px 0 rgba(37, 99, 235, 0.03) !important;
 }
 
 .glass-panel-dark {
-  background: rgba(255, 255, 255, 0.7) !important;
+  background: rgba(255, 255, 255, 0.92) !important;
   backdrop-filter: blur(24px) !important;
   -webkit-backdrop-filter: blur(24px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.8) !important;
-  color: #1e293b !important;
-  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.05) !important;
+  border: 1px solid rgba(226, 232, 240, 0.95) !important;
+  color: #0f172a !important;
+  box-shadow: 0 10px 30px -5px rgba(16, 185, 129, 0.06), 0 4px 15px 0 rgba(37, 99, 235, 0.04) !important;
 }
 
 .glow-card {
-  box-shadow: 0 0 25px -5px rgba(6, 182, 212, 0.08);
+  box-shadow: 0 0 25px -5px rgba(16, 185, 129, 0.12), 0 0 15px -3px rgba(37, 99, 235, 0.1);
 }
 
-/* Global Rebranding Overrides: Converters from dark tailwind utilities to light glass styles */
-.bg-slate-950 {
-  background-color: rgba(255, 255, 255, 0.35) !important;
+/* Custom Green and Blue Theme Utilities */
+.btn-emerald-blue {
+  background: linear-gradient(135deg, #059669 0%, #2563eb 100%) !important;
+  color: #ffffff !important;
+  transition: all 0.2s ease-in-out;
 }
-.bg-slate-950\/60 {
-  background-color: rgba(255, 255, 255, 0.45) !important;
+.btn-emerald-blue:hover {
+  background: linear-gradient(135deg, #10b981 0%, #3b82f6 100%) !important;
+  box-shadow: 0 6px 20px -3px rgba(16, 185, 129, 0.3) !important;
 }
-.bg-slate-950\/80 {
-  background-color: rgba(255, 255, 255, 0.55) !important;
+
+/* Global Rebranding Overrides: Converts any legacy dark tailwind utilities to bright white-light container styles */
+.bg-slate-950, .bg-slate-950\/60, .bg-slate-950\/80 {
+  background-color: rgba(255, 255, 255, 0.88) !important;
 }
-.bg-slate-900 {
-  background-color: rgba(255, 255, 255, 0.65) !important;
-}
-.bg-slate-900\/60 {
-  background-color: rgba(255, 255, 255, 0.6) !important;
-}
-.bg-slate-900\/40 {
-  background-color: rgba(255, 255, 255, 0.4) !important;
-}
-.bg-slate-900\/50 {
-  background-color: rgba(255, 255, 255, 0.5) !important;
+.bg-slate-900, .bg-slate-900\/60, .bg-slate-900\/40, .bg-slate-900\/50 {
+  background-color: rgba(255, 255, 255, 0.9) !important;
 }
 .bg-slate-850 {
-  background-color: rgba(255, 255, 255, 0.75) !important;
+  background-color: rgba(248, 250, 252, 0.95) !important;
 }
-.bg-slate-800 {
-  background-color: rgba(241, 245, 249, 0.85) !important;
+.bg-slate-800, .bg-slate-800\/50, .bg-slate-800\/60 {
+  background-color: rgba(241, 245, 249, 0.9) !important;
 }
-.bg-slate-800\/50 {
-  background-color: rgba(241, 245, 249, 0.5) !important;
-}
-.bg-slate-800\/60 {
-  background-color: rgba(241, 245, 249, 0.6) !important;
-}
-.bg-slate-700 {
+.bg-slate-700, .bg-slate-600 {
   background-color: rgba(226, 232, 240, 0.95) !important;
-  color: #1e293b !important;
+  color: #0f172a !important;
 }
-.bg-slate-600 {
-  background-color: rgba(203, 213, 225, 0.95) !important;
-  color: #1e293b !important;
+
+/* Accent Converters for Cyan -> Emerald & Ocean Blue */
+.text-cyan-400, .text-cyan-500 {
+  color: #059669 !important; /* Emerald green */
+}
+.text-cyan-300 {
+  color: #2563eb !important; /* Ocean blue */
+}
+.bg-cyan-500 {
+  background-color: #10b981 !important;
+}
+.bg-cyan-600 {
+  background-color: #059669 !important;
+}
+.border-cyan-500, .border-cyan-400 {
+  border-color: #10b981 !important;
 }
 
 /* Borders overrides */
-.border-slate-800 {
-  border-color: rgba(226, 232, 240, 0.8) !important;
-}
-.border-slate-800\/40 {
-  border-color: rgba(226, 232, 240, 0.4) !important;
-}
-.border-slate-800\/60 {
-  border-color: rgba(226, 232, 240, 0.6) !important;
-}
-.border-slate-850 {
-  border-color: rgba(226, 232, 240, 0.8) !important;
-}
-.border-slate-700 {
-  border-color: rgba(203, 213, 225, 0.6) !important;
-}
-.border-slate-700\/60 {
-  border-color: rgba(203, 213, 225, 0.4) !important;
-}
-.border-slate-750 {
-  border-color: rgba(203, 213, 225, 0.5) !important;
+.border-slate-800, .border-slate-800\/40, .border-slate-800\/60, .border-slate-850, .border-slate-700, .border-slate-700\/60, .border-slate-750 {
+  border-color: rgba(226, 232, 240, 0.9) !important;
 }
 
 /* Typography contrast overrides */
-.text-slate-100 {
+.text-slate-100, .text-slate-200 {
   color: #0f172a !important;
 }
-.text-slate-200 {
+.text-slate-300, .text-slate-400 {
   color: #1e293b !important;
 }
-.text-slate-300 {
-  color: #334155 !important;
-}
-.text-slate-400 {
-  color: #475569 !important;
-}
 .text-slate-500 {
-  color: #64748b !important;
+  color: #475569 !important;
 }
 
 /* Hover background and text fixes */
-.hover\:bg-slate-850:hover {
-  background-color: rgba(241, 245, 249, 0.9) !important;
-}
-.hover\:bg-slate-800:hover {
-  background-color: rgba(226, 232, 240, 0.9) !important;
+.hover\:bg-slate-850:hover, .hover\:bg-slate-800:hover {
+  background-color: rgba(236, 253, 245, 0.9) !important; /* Soft emerald hover */
 }
 .hover\:bg-slate-700:hover {
-  background-color: rgba(203, 213, 225, 0.9) !important;
+  background-color: rgba(239, 246, 255, 0.9) !important; /* Soft blue hover */
 }
 .hover\:text-white:hover {
-  color: #0f172a !important;
+  color: #059669 !important;
 }
 
 /* Form Controls & Input elements fallback */
 input, select, textarea {
-  background-color: rgba(255, 255, 255, 0.8) !important;
-  color: #1e293b !important;
-  border-color: rgba(226, 232, 240, 0.9) !important;
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  color: #0f172a !important;
+  border-color: rgba(203, 213, 225, 0.9) !important;
 }
 input::placeholder, textarea::placeholder {
   color: #94a3b8 !important;
 }
 input:focus, select:focus, textarea:focus {
-  border-color: #06b6d4 !important;
-  box-shadow: 0 0 0 1px rgba(6, 182, 212, 0.2) !important;
+  border-color: #10b981 !important;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2) !important;
 }
 
-/* Status alerts and badges overrides for light mode contrast */
-.bg-emerald-950\/60 {
+/* Status alerts and badges overrides for Green & Blue contrast */
+.bg-emerald-950\/60, .bg-emerald-900\/40 {
   background-color: #ecfdf5 !important;
   border-color: #a7f3d0 !important;
   color: #065f46 !important;
 }
 .text-emerald-400 {
   color: #047857 !important;
+}
+.bg-blue-950\/60, .bg-blue-900\/40 {
+  background-color: #eff6ff !important;
+  border-color: #bfdbfe !important;
+  color: #1e40af !important;
+}
+.text-blue-400 {
+  color: #1d4ed8 !important;
 }
 .bg-rose-950\/60 {
   background-color: #fff1f2 !important;
@@ -192,12 +176,7 @@ input:focus, select:focus, textarea:focus {
 .text-amber-400 {
   color: #b45309 !important;
 }
-.bg-cyan-950 {
-  background-color: #ecfeff !important;
-  border-color: #cffafe !important;
-  color: #0e7490 !important;
-}
-.bg-cyan-950\/60 {
+.bg-cyan-950, .bg-cyan-950\/60 {
   background-color: #ecfeff !important;
   border-color: #cffafe !important;
   color: #0e7490 !important;
@@ -212,9 +191,17 @@ input:focus, select:focus, textarea:focus {
   background: transparent;
 }
 .modern-scrollbar::-webkit-scrollbar-thumb {
-  background: #e2e8f0;
+  background: #cbd5e1;
   border-radius: 3px;
 }
 .modern-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #cbd5e1;
+  background: #10b981;
+}
+
+/* Dynamic RTL Adjustments */
+[dir="rtl"] {
+  text-align: right;
+}
+[dir="rtl"] .font-bold, [dir="rtl"] h1, [dir="rtl"] h2, [dir="rtl"] h3 {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }

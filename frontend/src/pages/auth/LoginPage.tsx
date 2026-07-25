@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore.js';
+import { useLanguageStore } from '../../store/languageStore.js';
 import { api } from '../../utils/api.js';
-import { GraduationCap, Lock, Mail, Loader2, Sparkles, HelpCircle } from 'lucide-react';
+import { GraduationCap, Lock, Mail, Loader2, Sparkles, HelpCircle, Globe } from 'lucide-react';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -11,6 +12,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   
   const loginStore = useAuthStore((state) => state.login);
+  const { language, toggleLanguage, t } = useLanguageStore();
   const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -33,31 +35,40 @@ export default function LoginPage() {
     }
   };
 
-
-
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-800 flex flex-col justify-center items-center px-4 relative overflow-hidden font-sans">
-      {/* Liquid Glass Background Blobs */}
-      <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full bg-gradient-to-tr from-sky-200/40 to-indigo-200/40 blur-[100px] animate-blob pointer-events-none z-0" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[450px] h-[450px] rounded-full bg-gradient-to-tr from-pink-200/35 to-purple-200/35 blur-[100px] animate-blob animation-delay-2000 pointer-events-none z-0" />
-      <div className="absolute top-[35%] left-[25%] w-[400px] h-[400px] rounded-full bg-gradient-to-tr from-teal-100/30 to-cyan-200/40 blur-[90px] animate-blob animation-delay-4000 pointer-events-none z-0" />
+    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col justify-center items-center px-4 relative overflow-hidden font-sans">
+      {/* Liquid Glass Background Blobs - Green & Blue */}
+      <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full bg-gradient-to-tr from-emerald-300/35 to-teal-200/35 blur-[100px] animate-blob pointer-events-none z-0" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[450px] h-[450px] rounded-full bg-gradient-to-tr from-blue-300/35 to-indigo-200/35 blur-[100px] animate-blob animation-delay-2000 pointer-events-none z-0" />
+      <div className="absolute top-[35%] left-[25%] w-[400px] h-[400px] rounded-full bg-gradient-to-tr from-emerald-200/25 to-blue-200/30 blur-[90px] animate-blob animation-delay-4000 pointer-events-none z-0" />
+
+      {/* Top Navbar Switcher */}
+      <div className="absolute top-6 right-6 z-20">
+        <button
+          onClick={toggleLanguage}
+          className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/90 hover:bg-emerald-50 border border-emerald-200 text-xs font-bold text-emerald-800 transition shadow-sm"
+        >
+          <Globe className="h-4 w-4 text-emerald-600" />
+          <span>{language === 'en' ? 'العربية 🇸🇦' : 'English 🇬🇧'}</span>
+        </button>
+      </div>
 
       <div className="w-full max-w-md space-y-8 z-10">
         {/* Top Logo */}
         <div className="flex flex-col items-center text-center space-y-3">
           <Link to="/" className="flex items-center gap-3">
-            <div className="h-12 w-12 bg-cyan-500 rounded-2xl flex items-center justify-center shadow-lg shadow-cyan-500/20">
-              <GraduationCap className="h-7 w-7 text-slate-950 stroke-[2.5]" />
+            <div className="h-12 w-12 bg-gradient-to-tr from-emerald-600 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-600/20">
+              <GraduationCap className="h-7 w-7 text-white stroke-[2.5]" />
             </div>
           </Link>
           <div>
-            <h2 className="text-3xl font-extrabold tracking-tight">Welcome back</h2>
-            <p className="text-slate-400 text-sm mt-1">Sign in to your EduSync AI campus portal</p>
+            <h2 className="text-3xl font-extrabold tracking-tight text-slate-900">{t('welcome')}</h2>
+            <p className="text-slate-500 text-sm mt-1">{language === 'ar' ? 'سجل الدخول إلى بوابة إيدوسينك الذكية' : 'Sign in to your EduSync AI campus portal'}</p>
           </div>
         </div>
 
         {/* Login form panel */}
-        <div className="bg-slate-900/60 border border-slate-800 p-8 rounded-3xl shadow-2xl backdrop-blur-md space-y-6">
+        <div className="bg-white/85 border border-slate-200 p-8 rounded-3xl shadow-xl backdrop-blur-md space-y-6">
           {error && (
             <div className="p-4 bg-rose-950/60 border border-rose-800/40 rounded-xl text-rose-400 text-sm text-center">
               {error}
@@ -102,15 +113,15 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-cyan-500 hover:bg-cyan-400 disabled:bg-cyan-500/50 text-slate-950 font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 text-sm shadow-lg shadow-cyan-500/10 mt-6"
+              className="w-full btn-emerald-blue disabled:opacity-50 text-white font-bold py-3.5 rounded-xl transition flex items-center justify-center gap-2 text-sm shadow-md mt-6"
             >
               {loading ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Verifying Credentials...
+                  {language === 'ar' ? 'جاري التحقق من الهوية...' : 'Verifying Credentials...'}
                 </>
               ) : (
-                'Sign In to Portal'
+                language === 'ar' ? 'تسجيل الدخول للنظام' : 'Sign In to Portal'
               )}
             </button>
           </form>

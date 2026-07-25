@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { api } from '../../../utils/api.js';
+import { useLanguageStore } from '../../../store/languageStore.js';
 import {
   Users, BookOpen, Landmark, Building, Calendar, ArrowRight,
   TrendingUp, Activity, Plus, Search, Filter, AlertCircle, Trash2,
@@ -257,6 +258,7 @@ const DEFAULT_SUB_FORM: SubjectFormState = {
 
 function AdminDashboard() {
   const { user } = useAuthStore();
+  const { t, language } = useLanguageStore();
   const userRole = user?.role;
   const location = useLocation();
 

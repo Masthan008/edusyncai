@@ -3,14 +3,14 @@
 # 🎓 EduSync AI
 ### *Next-Generation Enterprise School & College ERP Platform*
 
-![Version](https://img.shields.io/badge/version-2.5.0-cyan?style=for-the-badge&logo=react)
-![License](https://img.shields.io/badge/license-MIT-indigo?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-3.0.0-emerald?style=for-the-badge&logo=react)
+![Theme](https://img.shields.io/badge/theme-Green%20%26%20Blue%20Light%20Glass-blue?style=for-the-badge)
+![Languages](https://img.shields.io/badge/i18n-English%20%2B%20Arabic%20RTL-success?style=for-the-badge)
 ![Build](https://img.shields.io/badge/build-passing-emerald?style=for-the-badge&logo=github)
-![AI Powered](https://img.shields.io/badge/AI-Google%20Gemini%201.5%20Flash-blue?style=for-the-badge&logo=google)
-![Design System](https://img.shields.io/badge/UI-Liquid%20Glassmorphism-pink?style=for-the-badge)
+![AI Powered](https://img.shields.io/badge/AI-Google%20Gemini%201.5%20Flash-indigo?style=for-the-badge&logo=google)
 
 <p align="center">
-  <b>EduSync AI</b> is an all-in-one Cloud ERP and Academic Operating System unifying educational administration, student intelligence, multi-channel tuition billing, classroom scheduling, transport fleet, hostels, library LMS, and bilingual policy guidelines under a state-of-the-art <b>Liquid Glass</b> interface.
+  <b>EduSync AI</b> is an all-in-one Cloud ERP and Academic Operating System unifying educational administration, student intelligence, multi-channel tuition billing, classroom scheduling, transport fleet, hostels, library LMS, and bilingual policy guidelines under a state-of-the-art <b>Green & Blue Glossy Light Glass</b> interface with dynamic <b>Arabic RTL</b> language switching.
 </p>
 
 [✨ Explore Live Demo](#-quick-start) • [📖 Read PRD Specification](./product_requirements_document.md) • [🗺️ API Registry](#%EF%B8%8F-api-route-registry) • [🎨 Design System](#-liquid-glass-ui-design-system)
@@ -27,7 +27,7 @@
 - [🛠️ Tech Stack & Engineering Stack](#%EF%B8%8F-tech-stack--engineering-stack)
 - [⚡ Quick Start & Installation Guide](#-quick-start--installation-guide)
 - [🗺️ API Route Registry](#%EF%B8%8F-api-route-registry)
-- [🎨 Liquid Glass UI Design System](#-liquid-glass-ui-design-system)
+- [🎨 Green & Blue Light Theme & Micro-Animations](#-green--blue-light-theme--micro-animations)
 - [🚀 Strategic Product Roadmap](#-strategic-product-roadmap)
 - [📋 Unique Reusable README Template](#-unique-reusable-readme-template)
 - [📄 License & Credits](#-license--credits)
@@ -36,7 +36,7 @@
 
 ## 🌟 Executive Value Proposition
 
-Educational institutions often operate on legacy administrative tools plagued by fragmented modules, zero predictive student analytics, poor mobile responsiveness, and high downtime during maintenance. **EduSync AI** solves these pain points by integrating high-throughput data management with **Google Gemini AI**, real-time bilingual English & Arabic RTL support, native transport/hostel/library modules, and multi-persona access control.
+Educational institutions often operate on legacy administrative tools plagued by fragmented modules, zero predictive student analytics, dark unoptimized UIs, and high downtime during maintenance. **EduSync AI** solves these pain points by integrating high-throughput data management with **Google Gemini AI**, real-time bilingual English & Arabic RTL support, native transport/hostel/library modules, multi-persona access control, and a vibrant **Green & Blue Light Theme**.
 
 ---
 
@@ -49,7 +49,7 @@ Educational institutions often operate on legacy administrative tools plagued by
 | **Predictive At-Risk Analytics** | Basic Reports | Plugin Required | Basic Reports | **Automated AI Risk Level & Recommendations** |
 | **Bilingual Guidelines & RTL** | English Only | Paid Plugin | Limited | **Native English & Arabic with Dynamic RTL (`dir="rtl"`)** |
 | **SOP One-Click AI Translation** | None | None | None | **1-Click AI Translation (Gemini + Local Fallback)** |
-| **UI Aesthetics & Themes** | Standard Enterprise Tables | Classic Web Layout | Odoo Standard | **White Glossy Liquid Glassmorphism & Blobs** |
+| **UI Aesthetics & Themes** | Standard Enterprise Tables | Classic Web Layout | Odoo Standard | **Green & Blue Glossy Light Glassmorphism** |
 | **Student Information System (SIMS)** | ✅ Included | ✅ Included | ✅ Included | **✅ Full CRUD with Admission & Parent Link** |
 | **Faculty Management (FIMS)** | ✅ Included | ✅ Included | ✅ Included | **✅ Department Allocation & HOD Tracking** |
 | **Conflict-Free Timetable Engine** | ✅ Included | ✅ Included | ✅ Included | **✅ Unique Composite SQL Key Enforcement** |
@@ -81,7 +81,7 @@ EduSync AI provides customized user experiences tailored to 7 security roles acr
 ```
 +-----------------------------------------------------------------------------------+
 |                                FRONTEND CLIENT LAYER                              |
-|   React 18 | TypeScript | Tailwind CSS (Liquid Glass) | Zustand | Axios | Lucide   |
+|   React 18 | TypeScript | Tailwind CSS (Light Glass) | Zustand | Axios | Lucide   |
 +-----------------------------------------------------------------------------------+
                                           │ REST API (JSON / Bearer JWT)
                                           ▼
@@ -160,10 +160,11 @@ npm run dev
 
 ---
 
-## 🎨 Liquid Glass UI Design System
+## 🎨 Green & Blue Light Theme & Micro-Animations
 
-EduSync AI introduces a high-performance **Glossy Light Mode Glassmorphism** design language:
+EduSync AI features a state-of-the-art **Green & Blue Glossy Light Mode Glassmorphism** design language:
 
+- **Emerald Green & Ocean Blue Palette:** High-energy gradient accents (`.btn-emerald-blue`), emerald highlights (`#10b981`), and ocean blue rings (`#2563eb`).
 - **Floating Liquid Backdrops:** Animated gradient spheres floating across the canvas via `@keyframes float-blob`.
 - **Contrast Typography:** Slate-800 (`#1e293b`) & Slate-900 (`#0f172a`) fonts ensure maximum legibility over frosted white glass panels.
 - **Native RTL Rendering:** Realigns step timelines, scrollbars, and navigation drawers when Arabic mode is enabled (`dir="rtl"`).

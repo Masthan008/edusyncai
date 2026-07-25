@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { api } from '../../../utils/api.js';
 import { useAuthStore } from '../../../store/authStore.js';
+import { useLanguageStore } from '../../../store/languageStore.js';
 import { 
   CheckSquare, Award, BookOpen, Clock, Check, Save, Plus, 
   Search, CalendarDays, FileText, ChevronRight, AlertCircle, Sparkles
