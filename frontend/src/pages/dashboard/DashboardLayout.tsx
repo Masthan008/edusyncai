@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore.js';
+import { api } from '../../utils/api.js';
 import { 
   GraduationCap, LayoutDashboard, Users, BookOpen, Clock, 
   Landmark, Bell, LogOut, Menu, X, Sparkles, Building, CheckSquare, 
@@ -10,18 +11,26 @@ import {
 export default function DashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notifPanelOpen, setNotifPanelOpen] = useState(false);
-  const [notifications] = useState<Array<{ type: 'info' | 'warning'; title: string; message: string }>>([
-    { type: 'info', title: 'Welcome to EduSync AI', message: 'The school management ERP portal is ready for your deployment.' },
-    { type: 'warning', title: 'Midterm Exam Grades', message: 'Grades compilation for Grade 10 organic chemistry has been published.' },
-  ]);
+  const [notifications, setNotifications] = useState<Array<{ type: string; title: string; message: string }>>([]);
   const { user, profile, logout } = useAuthStore();
   const location = useLocation();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    api.get('/school/notifications')
+      .then((res) => {
+        if (res.data && res.data.data) {
+          setNotifications(res.data.data);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
+
 
   const getNavigationForRole = (role: string) => {
     const common = [
@@ -138,7 +147,7 @@ export default function DashboardLayout() {
                 <div className="flex justify-between items-center pb-2 border-b border-slate-800">
                   <span className="font-bold text-sm">Notifications</span>
                   <button 
-                    onClick={() => setNotifPanelOpen(false)}
+                    onClick={() => setNotifications([])}
                     className="text-xs text-slate-500 hover:text-white"
                   >
                     Clear all

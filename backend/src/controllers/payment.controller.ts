@@ -177,3 +177,35 @@ export const getAccountantSummary = async (req: Request, res: Response, next: Ne
     next(error);
   }
 };
+
+export const getPaymentReceipt = async (req: Request, res: Response, next: NextFunction) => {
+  const { paymentId } = req.params;
+
+  try {
+    const receiptRes = await query(
+      `SELECT p.*, 
+              s.first_name || ' ' || s.last_name as student_name, s.admission_number,
+              c.name as class_name, sec.name as section_name,
+              fs.name as fee_name, fs.amount as fee_total_amount
+       FROM payments p
+       JOIN students s ON p.student_id = s.id
+       LEFT JOIN classes c ON s.class_id = c.id
+       LEFT JOIN sections sec ON s.section_id = sec.id
+       JOIN fee_structures fs ON p.fee_structure_id = fs.id
+       WHERE p.id = $1`,
+      [paymentId]
+    );
+
+    if (receiptRes.rowCount === 0) {
+      return res.status(404).json({ success: false, message: 'Payment receipt record not found.' });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: receiptRes.rows[0],
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
