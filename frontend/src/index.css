@@ -4,185 +4,165 @@
 
 @layer base {
   body {
-    @apply font-sans bg-slate-50 text-slate-800 antialiased selection:bg-emerald-500 selection:text-white;
+    @apply font-sans bg-slate-100 text-slate-900 antialiased selection:bg-emerald-500 selection:text-white relative min-h-screen overflow-x-hidden;
   }
 }
 
-/* Float Animation for background liquid glass blobs */
-@keyframes float-blob {
-  0% {
-    transform: translate(0px, 0px) scale(1);
-  }
-  33% {
-    transform: translate(40px, -60px) scale(1.15);
-  }
-  66% {
-    transform: translate(-30px, 30px) scale(0.9);
-  }
-  100% {
-    transform: translate(0px, 0px) scale(1);
-  }
+/* Fluid Liquid Glass Motion Animations */
+@keyframes float-blob-1 {
+  0% { transform: translate(0px, 0px) rotate(0deg) scale(1); }
+  33% { transform: translate(60px, -80px) rotate(120deg) scale(1.2); }
+  66% { transform: translate(-40px, 40px) rotate(240deg) scale(0.85); }
+  100% { transform: translate(0px, 0px) rotate(360deg) scale(1); }
 }
 
-.animate-blob {
-  animation: float-blob 22s infinite ease-in-out;
-}
-.animation-delay-2000 {
-  animation-delay: 2s;
-}
-.animation-delay-4000 {
-  animation-delay: 4s;
+@keyframes float-blob-2 {
+  0% { transform: translate(0px, 0px) rotate(0deg) scale(1.1); }
+  33% { transform: translate(-70px, 50px) rotate(-120deg) scale(0.9); }
+  66% { transform: translate(50px, -60px) rotate(-240deg) scale(1.15); }
+  100% { transform: translate(0px, 0px) rotate(-360deg) scale(1.1); }
 }
 
-/* Glassmorphic panel definitions - Pure White Light Glass with Green & Blue Highlights */
-.glass-panel {
-  background: rgba(255, 255, 255, 0.85) !important;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(226, 232, 240, 0.9) !important;
-  box-shadow: 0 10px 30px -5px rgba(16, 185, 129, 0.05), 0 4px 12px 0 rgba(37, 99, 235, 0.03) !important;
+@keyframes glass-shimmer {
+  0% { transform: translateX(-150%) rotate(25deg); }
+  40% { transform: translateX(250%) rotate(25deg); }
+  100% { transform: translateX(250%) rotate(25deg); }
 }
 
-.glass-panel-dark {
-  background: rgba(255, 255, 255, 0.92) !important;
-  backdrop-filter: blur(24px) !important;
-  -webkit-backdrop-filter: blur(24px) !important;
-  border: 1px solid rgba(226, 232, 240, 0.95) !important;
-  color: #0f172a !important;
-  box-shadow: 0 10px 30px -5px rgba(16, 185, 129, 0.06), 0 4px 15px 0 rgba(37, 99, 235, 0.04) !important;
+.animate-blob-1 {
+  animation: float-blob-1 20s infinite cubic-bezier(0.4, 0, 0.2, 1);
+}
+.animate-blob-2 {
+  animation: float-blob-2 25s infinite cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.glass-shimmer::after {
+  content: '';
+  position: absolute;
+  top: -100%;
+  left: -100%;
+  width: 300%;
+  height: 300%;
+  background: linear-gradient(
+    60deg,
+    rgba(255, 255, 255, 0) 20%,
+    rgba(255, 255, 255, 0.5) 50%,
+    rgba(255, 255, 255, 0) 80%
+  );
+  animation: glass-shimmer 7s infinite ease-in-out;
+  pointer-events: none;
+}
+
+/* PREMIUM LIQUID GLASS CONTAINER STYLES (True Translucency & High Contrast) */
+.glass-panel, .glass-panel-dark, .liquid-glass-card {
+  background: rgba(255, 255, 255, 0.65) !important;
+  backdrop-filter: blur(28px) saturate(190%) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(190%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.8) !important;
+  box-shadow: 
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.9),
+    0 20px 40px -15px rgba(16, 185, 129, 0.12),
+    0 8px 20px 0 rgba(37, 99, 235, 0.08) !important;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.glass-panel:hover, .liquid-glass-card:hover {
+  background: rgba(255, 255, 255, 0.75) !important;
+  box-shadow: 
+    inset 0 1px 2px 0 rgba(255, 255, 255, 1),
+    0 25px 50px -12px rgba(16, 185, 129, 0.22),
+    0 12px 30px 0 rgba(37, 99, 235, 0.15) !important;
+  transform: translateY(-3px);
 }
 
 .glow-card {
-  box-shadow: 0 0 25px -5px rgba(16, 185, 129, 0.12), 0 0 15px -3px rgba(37, 99, 235, 0.1);
+  box-shadow: 0 0 35px -5px rgba(16, 185, 129, 0.25), 0 0 20px -3px rgba(37, 99, 235, 0.2) !important;
 }
 
-/* Custom Green and Blue Theme Utilities */
+/* Vibrant Emerald Green & Ocean Blue Gradient Button */
 .btn-emerald-blue {
   background: linear-gradient(135deg, #059669 0%, #2563eb 100%) !important;
   color: #ffffff !important;
-  transition: all 0.2s ease-in-out;
+  box-shadow: 0 4px 15px rgba(5, 150, 105, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 .btn-emerald-blue:hover {
   background: linear-gradient(135deg, #10b981 0%, #3b82f6 100%) !important;
-  box-shadow: 0 6px 20px -3px rgba(16, 185, 129, 0.3) !important;
+  box-shadow: 0 8px 25px rgba(16, 185, 129, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.5) !important;
+  transform: translateY(-2px);
 }
 
-/* Global Rebranding Overrides: Converts any legacy dark tailwind utilities to bright white-light container styles */
-.bg-slate-950, .bg-slate-950\/60, .bg-slate-950\/80 {
-  background-color: rgba(255, 255, 255, 0.88) !important;
+/* Global Container Background Overrides: Enables Liquid Blobs to shine through */
+.bg-slate-950, .bg-slate-950\/60, .bg-slate-950\/80,
+.bg-slate-900, .bg-slate-900\/60, .bg-slate-900\/40, .bg-slate-900\/50,
+.bg-slate-850, .bg-slate-800, .bg-slate-800\/50, .bg-slate-800\/60 {
+  background-color: rgba(255, 255, 255, 0.65) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+  border-color: rgba(255, 255, 255, 0.8) !important;
 }
-.bg-slate-900, .bg-slate-900\/60, .bg-slate-900\/40, .bg-slate-900\/50 {
-  background-color: rgba(255, 255, 255, 0.9) !important;
-}
-.bg-slate-850 {
-  background-color: rgba(248, 250, 252, 0.95) !important;
-}
-.bg-slate-800, .bg-slate-800\/50, .bg-slate-800\/60 {
-  background-color: rgba(241, 245, 249, 0.9) !important;
-}
-.bg-slate-700, .bg-slate-600 {
-  background-color: rgba(226, 232, 240, 0.95) !important;
+
+/* High Contrast Slate Typography */
+.text-slate-100, .text-slate-200, .text-slate-900 {
   color: #0f172a !important;
+  font-weight: 700;
 }
-
-/* Accent Converters for Cyan -> Emerald & Ocean Blue */
-.text-cyan-400, .text-cyan-500 {
-  color: #059669 !important; /* Emerald green */
-}
-.text-cyan-300 {
-  color: #2563eb !important; /* Ocean blue */
-}
-.bg-cyan-500 {
-  background-color: #10b981 !important;
-}
-.bg-cyan-600 {
-  background-color: #059669 !important;
-}
-.border-cyan-500, .border-cyan-400 {
-  border-color: #10b981 !important;
-}
-
-/* Borders overrides */
-.border-slate-800, .border-slate-800\/40, .border-slate-800\/60, .border-slate-850, .border-slate-700, .border-slate-700\/60, .border-slate-750 {
-  border-color: rgba(226, 232, 240, 0.9) !important;
-}
-
-/* Typography contrast overrides */
-.text-slate-100, .text-slate-200 {
-  color: #0f172a !important;
-}
-.text-slate-300, .text-slate-400 {
+.text-slate-300, .text-slate-400, .text-slate-800 {
   color: #1e293b !important;
 }
-.text-slate-500 {
-  color: #475569 !important;
+.text-slate-500, .text-slate-600 {
+  color: #334155 !important;
 }
 
-/* Hover background and text fixes */
-.hover\:bg-slate-850:hover, .hover\:bg-slate-800:hover {
-  background-color: rgba(236, 253, 245, 0.9) !important; /* Soft emerald hover */
-}
-.hover\:bg-slate-700:hover {
-  background-color: rgba(239, 246, 255, 0.9) !important; /* Soft blue hover */
-}
-.hover\:text-white:hover {
-  color: #059669 !important;
+/* Accent Colors */
+.text-cyan-400, .text-cyan-500 { color: #059669 !important; }
+.text-cyan-300 { color: #2563eb !important; }
+.bg-cyan-500 { background-color: #10b981 !important; }
+.bg-cyan-600 { background-color: #059669 !important; }
+.border-cyan-500, .border-cyan-400 { border-color: #10b981 !important; }
+
+.border-slate-800, .border-slate-800\/40, .border-slate-800\/60, .border-slate-850, .border-slate-700, .border-slate-700\/60, .border-slate-750 {
+  border-color: rgba(226, 232, 240, 0.8) !important;
 }
 
-/* Form Controls & Input elements fallback */
+/* Inputs & Form Elements Glass Styling */
 input, select, textarea {
-  background-color: rgba(255, 255, 255, 0.95) !important;
+  background-color: rgba(255, 255, 255, 0.85) !important;
+  backdrop-filter: blur(12px) !important;
   color: #0f172a !important;
-  border-color: rgba(203, 213, 225, 0.9) !important;
+  font-weight: 600 !important;
+  border: 1px solid rgba(203, 213, 225, 0.8) !important;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.03) !important;
+  transition: all 0.2s ease-in-out !important;
 }
 input::placeholder, textarea::placeholder {
-  color: #94a3b8 !important;
+  color: #64748b !important;
 }
 input:focus, select:focus, textarea:focus {
+  background-color: #ffffff !important;
   border-color: #10b981 !important;
-  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2) !important;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25) !important;
 }
 
-/* Status alerts and badges overrides for Green & Blue contrast */
+/* Status Badges */
 .bg-emerald-950\/60, .bg-emerald-900\/40 {
-  background-color: #ecfdf5 !important;
-  border-color: #a7f3d0 !important;
+  background-color: #d1fae5 !important;
+  border-color: #6ee7b7 !important;
   color: #065f46 !important;
 }
-.text-emerald-400 {
-  color: #047857 !important;
-}
+.text-emerald-400 { color: #047857 !important; }
 .bg-blue-950\/60, .bg-blue-900\/40 {
-  background-color: #eff6ff !important;
-  border-color: #bfdbfe !important;
+  background-color: #dbeafe !important;
+  border-color: #93c5fd !important;
   color: #1e40af !important;
 }
-.text-blue-400 {
-  color: #1d4ed8 !important;
-}
-.bg-rose-950\/60 {
-  background-color: #fff1f2 !important;
-  border-color: #fecdd3 !important;
-  color: #9f1239 !important;
-}
-.text-rose-400 {
-  color: #b91c1c !important;
-}
-.bg-amber-950\/60 {
-  background-color: #fef3c7 !important;
-  border-color: #fde68a !important;
-  color: #92400e !important;
-}
-.text-amber-400 {
-  color: #b45309 !important;
-}
-.bg-cyan-950, .bg-cyan-950\/60 {
-  background-color: #ecfeff !important;
-  border-color: #cffafe !important;
-  color: #0e7490 !important;
-}
+.text-blue-400 { color: #1d4ed8 !important; }
 
-/* Scrollbars overrides */
+/* Scrollbars */
 .modern-scrollbar::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -191,17 +171,51 @@ input:focus, select:focus, textarea:focus {
   background: transparent;
 }
 .modern-scrollbar::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 3px;
+  background: rgba(16, 185, 129, 0.4);
+  border-radius: 4px;
 }
 .modern-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #10b981;
 }
 
-/* Dynamic RTL Adjustments */
+/* Dynamic RTL Support */
 [dir="rtl"] {
   text-align: right;
 }
 [dir="rtl"] .font-bold, [dir="rtl"] h1, [dir="rtl"] h2, [dir="rtl"] h3 {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
+
+/* Extra Motion & Glowing Keyframe Animations */
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px 2px rgba(16, 185, 129, 0.3), 0 0 10px 0 rgba(37, 99, 235, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 35px 8px rgba(16, 185, 129, 0.55), 0 0 20px 4px rgba(37, 99, 235, 0.4);
+  }
+}
+
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-10px) rotate(2deg); }
+}
+
+@keyframes wave-motion {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 3s infinite ease-in-out;
+}
+.animate-float-slow {
+  animation: float-slow 5s infinite ease-in-out;
+}
+.animated-gradient-border {
+  background: linear-gradient(90deg, #10b981, #2563eb, #10b981);
+  background-size: 200% 200%;
+  animation: wave-motion 4s infinite linear;
+}
+

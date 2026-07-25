@@ -3,7 +3,8 @@ import {
   getClasses, createClass, deleteClass,
   getSections, createSection, deleteSection,
   getSubjects, createSubject, updateSubject, deleteSubject,
-  getAcademicYears, getNotifications, createNotification 
+  getAcademicYears, getNotifications, createNotification,
+  getPricingPlans, updatePricingPlan
 } from '../controllers/school.controller.js';
 import { authenticateToken, authorizeRoles } from '../middlewares/auth.js';
 import { validate } from '../middlewares/validator.js';
@@ -28,5 +29,9 @@ schoolRouter.get('/academic-years', authenticateToken, getAcademicYears);
 
 schoolRouter.get('/notifications', authenticateToken, getNotifications);
 schoolRouter.post('/notifications', authenticateToken, authorizeRoles('Admin', 'Principal'), createNotification);
+
+schoolRouter.get('/pricing', getPricingPlans);
+schoolRouter.put('/pricing/:id', authenticateToken, authorizeRoles('Admin'), updatePricingPlan);
+
 
 

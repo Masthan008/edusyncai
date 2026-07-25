@@ -206,7 +206,7 @@ interface SopFormState {
   steps_ar: SopStep[];
 }
 
-type TabId = 'overview' | 'students' | 'teachers' | 'departments' | 'timetables' | 'billing' | 'sops';
+type TabId = 'overview' | 'students' | 'teachers' | 'departments' | 'timetables' | 'billing' | 'sops' | 'pricing';
 
 const TABS: TabDef[] = [
   { id: 'overview', label: 'Overview' },
@@ -216,6 +216,7 @@ const TABS: TabDef[] = [
   { id: 'timetables', label: 'Timetables' },
   { id: 'billing', label: 'Finance' },
   { id: 'sops', label: 'SOP Guidelines' },
+  { id: 'pricing', label: 'Plan Pricing (INR ₹)' },
 ];
 
 const DEFAULT_SOP_FORM: SopFormState = {

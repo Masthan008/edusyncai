@@ -36,11 +36,11 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col justify-center items-center px-4 relative overflow-hidden font-sans">
-      {/* Liquid Glass Background Blobs - Green & Blue */}
-      <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full bg-gradient-to-tr from-emerald-300/35 to-teal-200/35 blur-[100px] animate-blob pointer-events-none z-0" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[450px] h-[450px] rounded-full bg-gradient-to-tr from-blue-300/35 to-indigo-200/35 blur-[100px] animate-blob animation-delay-2000 pointer-events-none z-0" />
-      <div className="absolute top-[35%] left-[25%] w-[400px] h-[400px] rounded-full bg-gradient-to-tr from-emerald-200/25 to-blue-200/30 blur-[90px] animate-blob animation-delay-4000 pointer-events-none z-0" />
+    <div className="min-h-screen bg-slate-100 text-slate-900 flex flex-col justify-center items-center px-4 relative overflow-hidden font-sans">
+      {/* Dynamic Vibrant Liquid Glass Backdrops */}
+      <div className="fixed top-[-15%] left-[-15%] w-[800px] h-[800px] rounded-full bg-gradient-to-tr from-emerald-400/40 via-teal-300/35 to-blue-500/40 blur-[70px] animate-blob-1 pointer-events-none z-0" />
+      <div className="fixed bottom-[-15%] right-[-15%] w-[750px] h-[750px] rounded-full bg-gradient-to-tr from-blue-500/40 via-indigo-400/35 to-emerald-400/40 blur-[80px] animate-blob-2 pointer-events-none z-0" />
+      <div className="fixed top-[30%] left-[20%] w-[600px] h-[600px] rounded-full bg-gradient-to-tr from-teal-300/30 via-emerald-400/30 to-sky-400/30 blur-[90px] animate-blob-1 pointer-events-none z-0" />
 
       {/* Top Navbar Switcher */}
       <div className="absolute top-6 right-6 z-20">

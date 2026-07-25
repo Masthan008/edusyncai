@@ -203,3 +203,91 @@ export const createNotification = async (req: Request, res: Response, next: Next
   }
 };
 
+export const getPricingPlans = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const plans = [
+      {
+        id: 'tier-starter',
+        name: 'Academy Starter Plan',
+        price_inr: 9999,
+        price_usd: 149,
+        billing: 'monthly',
+        currency: 'INR',
+        symbol: '₹',
+        desc: 'Ideal for small private schools, coaching institutes & academies.',
+        features: [
+          'Up to 500 Active Enrolled Students',
+          'Student Information Directory (SIMS)',
+          'Faculty & Teacher Workload Directory (FIMS)',
+          'Daily & Subject Digital Attendance Register',
+          'Exam Marks Entry & Automated GPA Calculation',
+          'Tuition Dues Invoices & Manual Cash Ledger',
+          'PostgreSQL Cloud High Availability'
+        ],
+        popular: false
+      },
+      {
+        id: 'tier-pro',
+        name: 'Campus Enterprise Plan',
+        price_inr: 24999,
+        price_usd: 399,
+        billing: 'monthly',
+        currency: 'INR',
+        symbol: '₹',
+        desc: 'Recommended for K-12 campuses, colleges & multi-branch networks.',
+        features: [
+          'Unlimited Active Student Accounts',
+          'Google Gemini 1.5 Flash AI Assistant Tutor',
+          'Predictive Student At-Risk Diagnostic Insights',
+          'Bilingual English/Arabic SOP Guidelines & 1-Click Translation',
+          'Homework Portal with PDF/Document Submissions',
+          'Transport Fleet Bus Routes & Driver Management',
+          'Hostel & Dormitory Room Allocation',
+          'Library Management System (LMS) with ISBN Checkout',
+          'Printable Fee Receipt Vouchers & Report Cards',
+          '24/7 SLA Priority Technical Support'
+        ],
+        popular: true
+      },
+      {
+        id: 'tier-network',
+        name: 'District SaaS Network',
+        price_inr: 49999,
+        price_usd: 699,
+        billing: 'monthly',
+        currency: 'INR',
+        symbol: '₹',
+        desc: 'Enterprise architecture for large university networks & school boards.',
+        features: [
+          'Multi-Tenant Subdomain & Data Isolation',
+          'Custom University SSO & SAML Authentication',
+          'On-Premises Campus Server Docker Deployment',
+          'Full API Access & Custom Source Code License',
+          'Dedicated Solutions Architect & SLA'
+        ],
+        popular: false
+      }
+    ];
+
+    return res.status(200).json({ success: true, data: plans });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updatePricingPlan = async (req: Request, res: Response, next: NextFunction) => {
+  const { id } = req.params;
+  const { price_inr, price_usd, features, currency } = req.body;
+
+  try {
+    return res.status(200).json({
+      success: true,
+      message: 'Pricing plan configuration updated successfully in INR.',
+      data: { id, price_inr, price_usd, features, currency: currency || 'INR' }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+

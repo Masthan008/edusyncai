@@ -61,27 +61,52 @@ export default function LandingPage() {
 
   const pricingTiers = [
     {
-      name: 'Academy Starter',
-      price: billingPeriod === 'annually' ? '$149' : '$189',
+      name: 'Academy Starter Plan',
+      price: billingPeriod === 'annually' ? '₹9,999' : '₹12,499',
       period: '/month',
-      desc: 'Perfect for small private K-12 schools & specialized tutoring centers.',
-      features: ['Up to 500 Active Students', 'Standard Attendance & Grading', 'Parent & Student Portals', 'PostgreSQL Database Cloud'],
+      desc: 'Ideal for small private schools, coaching institutes & academies.',
+      features: [
+        'Up to 500 Active Enrolled Students',
+        'Student Information Directory & Parent Linkage (SIMS)',
+        'Faculty & Teacher Directory with HOD Allocation (FIMS)',
+        'Daily & Subject Digital Attendance Register',
+        'Exam Marksheets & Automated GPA Calculator (A+, A, B, C, F)',
+        'Tuition Fees Ledger & Manual Cash Log',
+        'PostgreSQL Cloud High Availability'
+      ],
       popular: false
     },
     {
-      name: 'Campus Enterprise',
-      price: billingPeriod === 'annually' ? '$399' : '$499',
+      name: 'Campus Enterprise Plan',
+      price: billingPeriod === 'annually' ? '₹24,999' : '₹29,999',
       period: '/month',
-      desc: 'Ideal for colleges, multi-branch academies, and growing high school networks.',
-      features: ['Unlimited Student Accounts', 'Gemini AI Assistant & At-Risk Diagnostic', 'Bilingual English/Arabic RTL SOP Hub', 'Tuition Ledger & Electronic Receipts', '24/7 Dedicated Support SLA'],
+      desc: 'Recommended for colleges, high schools & multi-branch networks.',
+      features: [
+        'Unlimited Active Student Accounts',
+        'Google Gemini 1.5 Flash AI Assistant Tutor',
+        'Predictive Student At-Risk Diagnostic Insights',
+        'Bilingual English & Arabic RTL SOP Guidelines & 1-Click Translation',
+        'Homework Portal with PDF & Document Submissions',
+        'Transport Fleet Bus Routes & Driver Management',
+        'Hostel & Dormitory Room Booking Allocation',
+        'Library Management System (LMS) with ISBN Checkout',
+        'Printable Fee Receipt Vouchers & Report Cards',
+        '24/7 SLA Priority Technical Support'
+      ],
       popular: true
     },
     {
       name: 'District SaaS Network',
-      price: 'Custom Tier',
-      period: '',
-      desc: 'Dedicated enterprise infrastructure for regional educational boards.',
-      features: ['Multi-Campus Data Partitioning', 'Custom Subdomains & Custom SSO', 'On-Premises Docker Deployment', 'Full Source Code License Option'],
+      price: billingPeriod === 'annually' ? '₹49,999' : '₹59,999',
+      period: '/month',
+      desc: 'Enterprise architecture for large university networks & school boards.',
+      features: [
+        'Multi-Tenant Subdomain & Data Partitioning',
+        'Custom University SSO & SAML Authentication',
+        'On-Premises Campus Server Docker Deployment',
+        'Full API Access & Custom Source Code License',
+        'Dedicated Solutions Architect & SLA'
+      ],
       popular: false
     }
   ];
@@ -102,14 +127,14 @@ export default function LandingPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col font-sans relative overflow-hidden">
-      {/* Liquid Glass Background Blobs - Green & Blue */}
-      <div className="absolute top-[-10%] left-[-10%] w-[600px] h-[600px] rounded-full bg-gradient-to-tr from-emerald-300/35 to-teal-200/35 blur-[100px] animate-blob pointer-events-none z-0" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] rounded-full bg-gradient-to-tr from-blue-300/35 to-indigo-200/35 blur-[100px] animate-blob animation-delay-2000 pointer-events-none z-0" />
-      <div className="absolute top-[35%] left-[25%] w-[450px] h-[450px] rounded-full bg-gradient-to-tr from-emerald-200/25 to-blue-200/30 blur-[90px] animate-blob animation-delay-4000 pointer-events-none z-0" />
+    <div className="min-h-screen bg-slate-100 text-slate-900 flex flex-col font-sans relative overflow-hidden">
+      {/* Dynamic Vibrant Liquid Glass Backdrops */}
+      <div className="fixed top-[-15%] left-[-15%] w-[800px] h-[800px] rounded-full bg-gradient-to-tr from-emerald-400/40 via-teal-300/35 to-blue-500/40 blur-[70px] animate-blob-1 pointer-events-none z-0" />
+      <div className="fixed bottom-[-15%] right-[-15%] w-[750px] h-[750px] rounded-full bg-gradient-to-tr from-blue-500/40 via-indigo-400/35 to-emerald-400/40 blur-[80px] animate-blob-2 pointer-events-none z-0" />
+      <div className="fixed top-[30%] left-[20%] w-[600px] h-[600px] rounded-full bg-gradient-to-tr from-teal-300/30 via-emerald-400/30 to-sky-400/30 blur-[90px] animate-blob-1 pointer-events-none z-0" />
 
       {/* Navigation Header */}
-      <header className="h-20 bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50 px-6 shadow-xs">
+      <header className="h-20 glass-panel sticky top-0 z-50 px-6 shadow-sm border-b border-white/80">
         <div className="max-w-7xl mx-auto h-full flex items-center justify-between">
           <Link to="/" className="flex items-center gap-3">
             <div className="h-10 w-10 bg-gradient-to-tr from-emerald-600 to-blue-600 rounded-xl flex items-center justify-center shadow-md">
