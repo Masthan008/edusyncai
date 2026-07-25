@@ -80,6 +80,22 @@ export const mockDb: any = {
   payments: [],
   timetables: [],
   notifications: [],
+  transport_routes: [
+    { id: 'route-1', route_name: 'Downtown Express Line A', fare: 45.00 }
+  ],
+  transport_vehicles: [
+    { id: 'vehicle-1', vehicle_number: 'BUS-101', driver_name: 'Robert Miller', driver_phone: '+1555123456', route_id: 'route-1' }
+  ],
+  hostels: [
+    { id: 'hostel-1', name: 'Campus Executive Residency', type: 'Co-Ed', address: '100 University Avenue' }
+  ],
+  hostel_rooms: [
+    { id: 'room-101', hostel_id: 'hostel-1', room_number: 'Room 101', capacity: 2, rent_amount: 1500.00 }
+  ],
+  library_books: [
+    { id: 'book-1', title: 'Principles of Organic Chemistry', author: 'Dr. Alan Vance', isbn: '978-0134074665', category: 'Science', total_copies: 5, available_copies: 4 }
+  ],
+  library_issues: [],
   sops: [
     {
       id: 'sop-enrollment',

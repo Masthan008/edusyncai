@@ -12,6 +12,9 @@ import { analyticsRouter } from './analytics.routes.js';
 import { aiRouter } from './ai.routes.js';
 import { schoolRouter } from './school.routes.js';
 import { sopRouter } from './sop.routes.js';
+import { transportRouter } from './transport.routes.js';
+import { hostelRouter } from './hostel.routes.js';
+import { libraryRouter } from './library.routes.js';
 
 export const router = Router();
 
@@ -28,4 +31,8 @@ router.use('/analytics', analyticsRouter);
 router.use('/ai', aiRouter);
 router.use('/school', schoolRouter);
 router.use('/sops', sopRouter);
+router.use('/transport', transportRouter);
+router.use('/hostel', hostelRouter);
+router.use('/library', libraryRouter);
+
 

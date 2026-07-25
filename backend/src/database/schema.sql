@@ -322,3 +322,74 @@ CREATE TRIGGER trg_sops_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
+-- 22. transport_routes
+CREATE TABLE IF NOT EXISTS transport_routes (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    route_name VARCHAR(100) NOT NULL,
+    fare NUMERIC(10,2) DEFAULT 0.00,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 23. transport_vehicles
+CREATE TABLE IF NOT EXISTS transport_vehicles (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    vehicle_number VARCHAR(50) UNIQUE NOT NULL,
+    driver_name VARCHAR(100) NOT NULL,
+    driver_phone VARCHAR(20),
+    route_id UUID REFERENCES transport_routes(id) ON DELETE SET NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 24. hostels
+CREATE TABLE IF NOT EXISTS hostels (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(100) NOT NULL,
+    type VARCHAR(20) DEFAULT 'Co-Ed', -- Boys, Girls, Co-Ed
+    address TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 25. hostel_rooms
+CREATE TABLE IF NOT EXISTS hostel_rooms (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    hostel_id UUID NOT NULL REFERENCES hostels(id) ON DELETE CASCADE,
+    room_number VARCHAR(20) NOT NULL,
+    capacity INT DEFAULT 2,
+    rent_amount NUMERIC(10,2) DEFAULT 0.00,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(hostel_id, room_number)
+);
+
+-- 26. library_books
+CREATE TABLE IF NOT EXISTS library_books (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    title VARCHAR(200) NOT NULL,
+    author VARCHAR(100) NOT NULL,
+    isbn VARCHAR(50) UNIQUE NOT NULL,
+    category VARCHAR(50) DEFAULT 'General',
+    total_copies INT DEFAULT 1,
+    available_copies INT DEFAULT 1,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 27. library_issues
+CREATE TABLE IF NOT EXISTS library_issues (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    book_id UUID NOT NULL REFERENCES library_books(id) ON DELETE CASCADE,
+    student_id UUID NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+    issue_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    due_date DATE NOT NULL,
+    return_date DATE,
+    fine_amount NUMERIC(10,2) DEFAULT 0.00,
+    status VARCHAR(20) DEFAULT 'Issued', -- Issued, Returned, Overdue
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Indexes for new ERP modules
+CREATE INDEX IF NOT EXISTS idx_transport_vehicles_route ON transport_vehicles(route_id);
+CREATE INDEX IF NOT EXISTS idx_hostel_rooms_hostel ON hostel_rooms(hostel_id);
+CREATE INDEX IF NOT EXISTS idx_library_books_isbn ON library_books(isbn);
+CREATE INDEX IF NOT EXISTS idx_library_issues_student ON library_issues(student_id);
+CREATE INDEX IF NOT EXISTS idx_library_issues_book ON library_issues(book_id);
+
+
