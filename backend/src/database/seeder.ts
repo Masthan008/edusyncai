@@ -11,7 +11,7 @@ const __dirname = path.dirname(__filename);
 const { Pool } = pg;
 const pool = new Pool({
   connectionString: config.databaseUrl,
-  ssl: config.nodeEnv === 'production' ? { rejectUnauthorized: false } : false,
+  ssl: config.dbSsl ? { rejectUnauthorized: false } : false,
 });
 
 const hash = (pass: string) => bcrypt.hashSync(pass, 10);

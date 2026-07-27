@@ -7,7 +7,7 @@ const { Pool } = pg;
 // Connection Pool
 export const pool = new Pool({
   connectionString: config.databaseUrl,
-  ssl: config.nodeEnv === 'production' ? { rejectUnauthorized: false } : false,
+  ssl: config.dbSsl ? { rejectUnauthorized: false } : false,
 });
 
 let isPostgresConnected = false;
