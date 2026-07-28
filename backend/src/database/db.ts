@@ -436,7 +436,59 @@ export const query = async (text: string, params: any[] = []): Promise<{ rows: a
 
 
   // 10. Attendance & Attendance records
+  if (q.startsWith('INSERT INTO attendance ')) {
+    const [date, class_id, section_id, subject_id, taken_by] = params;
+    const newSession = {
+      id: `att-${Date.now()}`,
+      date,
+      class_id,
+      section_id,
+      subject_id: subject_id || null,
+      taken_by: taken_by || null,
+      created_at: new Date().toISOString()
+    };
+    mockDb.attendance.push(newSession);
+    return { rows: [newSession], rowCount: 1 };
+  }
+
+  if (q.startsWith('DELETE FROM attendance_records WHERE attendance_id =')) {
+    const attId = params[0];
+    mockDb.attendance_records = mockDb.attendance_records.filter((r: any) => r.attendance_id !== attId);
+    return { rows: [], rowCount: 1 };
+  }
+
+  if (q.startsWith('INSERT INTO attendance_records')) {
+    const attendanceId = params[0];
+    const inserted: any[] = [];
+    for (let i = 1; i < params.length; i += 3) {
+      const student_id = params[i];
+      const status = params[i + 1];
+      const remarks = params[i + 2];
+      const record = {
+        id: `att-rec-${Date.now()}-${i}`,
+        attendance_id: attendanceId,
+        student_id,
+        status,
+        remarks: remarks || null
+      };
+      mockDb.attendance_records.push(record);
+      inserted.push(record);
+    }
+    return { rows: inserted, rowCount: inserted.length };
+  }
+
   if (q.includes('FROM attendance_records') || q.includes('FROM attendance')) {
+    if (q.includes('SELECT id FROM attendance WHERE date =')) {
+      const [date, class_id, section_id, subject_id] = params;
+      const found = mockDb.attendance.find((a: any) =>
+        a.date === date &&
+        a.class_id === class_id &&
+        a.section_id === section_id &&
+        (a.subject_id === subject_id || (!a.subject_id && !subject_id))
+      );
+      return { rows: found ? [found] : [], rowCount: found ? 1 : 0 };
+    }
+
     if (q.includes('attendance_records JOIN') || q.includes('JOIN attendance_records')) {
       const list = mockDb.attendance_records.map((r: any) => {
         const att = mockDb.attendance.find((a: any) => a.id === r.attendance_id) || {};

@@ -20,7 +20,7 @@ export const submitAttendance = async (req: Request, res: Response, next: NextFu
 
     let attendanceId: string;
 
-    if (checkSession.rowCount > 0) {
+    if (checkSession && checkSession.rowCount > 0 && checkSession.rows && checkSession.rows[0]) {
       attendanceId = checkSession.rows[0].id;
       // Clear old records for this session to update them
       await query('DELETE FROM attendance_records WHERE attendance_id = $1', [attendanceId]);
@@ -30,7 +30,19 @@ export const submitAttendance = async (req: Request, res: Response, next: NextFu
          VALUES ($1, $2, $3, $4, $5) RETURNING id`,
         [date, class_id, section_id, subject_id || null, teacherId]
       );
-      attendanceId = newSession.rows[0].id;
+
+      if (newSession && newSession.rows && newSession.rows.length > 0 && newSession.rows[0]?.id) {
+        attendanceId = newSession.rows[0].id;
+      } else {
+        const fallbackCheck = await query(
+          `SELECT id FROM attendance 
+           WHERE date = $1 AND class_id = $2 AND section_id = $3`,
+          [date, class_id, section_id]
+        );
+        attendanceId = (fallbackCheck && fallbackCheck.rows && fallbackCheck.rows[0]?.id) 
+          ? fallbackCheck.rows[0].id 
+          : `att-${Date.now()}`;
+      }
     }
 
     // 2. Insert new records (batched for performance)
