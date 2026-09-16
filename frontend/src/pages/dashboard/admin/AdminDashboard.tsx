@@ -874,8 +874,20 @@ function AdminDashboard() {
       {/* Title & Tabs */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-800 pb-4">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight">Admin Control Center</h1>
-          <p className="text-slate-400 text-sm mt-1">Configure campus registries, schedules, payments, and view real-time stats.</p>
+          <h1 className="text-3xl font-extrabold tracking-tight">
+            {userRole === 'Principal'
+              ? 'Principal Executive Portal'
+              : userRole === 'HOD'
+              ? 'Head of Department (HOD) Portal'
+              : 'Admin Control Center'}
+          </h1>
+          <p className="text-slate-400 text-sm mt-1">
+            {userRole === 'Principal'
+              ? 'Institutional performance analytics, compliance oversight, and faculty monitoring.'
+              : userRole === 'HOD'
+              ? 'Departmental curriculum management, period schedules, and subject analytics.'
+              : 'Configure campus registries, schedules, payments, and view real-time stats.'}
+          </p>
         </div>
 
         <div className="flex flex-wrap gap-1 bg-slate-900 border border-slate-800 p-1.5 rounded-2xl max-w-full" role="tablist" aria-label="Dashboard sections">

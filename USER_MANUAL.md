@@ -146,6 +146,8 @@ EduSync AI implements Role-Based Access Control (RBAC) to ensure security and pr
 ---
 
 ### 4.4 Principal & Leadership Portal
+![Principal Dashboard](docs/images/principal_01_dashboard.png)
+
 - **GUI Overview:** Provides academic institution oversight, performance heatmaps, teacher activity logs, and at-risk student monitoring.
 - **Key Actions:** Approve institution SOPs, view multi-department pass rates, and trigger institutional reporting.
 
@@ -154,6 +156,8 @@ EduSync AI implements Role-Based Access Control (RBAC) to ensure security and pr
 ---
 
 ### 4.5 Department Head (HOD) Portal
+![HOD Dashboard](docs/images/hod_01_dashboard.png)
+
 - **GUI Overview:** Dedicated portal for managing course allocations, faculty timetables, and subject-wise grade distributions.
 - **Key Actions:** Review subject exam results, assign period schedules, and review departmental guidelines.
 
@@ -162,6 +166,8 @@ EduSync AI implements Role-Based Access Control (RBAC) to ensure security and pr
 ---
 
 ### 4.6 Teacher & Faculty Portal
+![Teacher Dashboard](docs/images/teacher_01_dashboard.png)
+
 - **GUI Overview:** Classroom-centric view allowing teachers to take digital attendance registers, publish homework assignments, and log test marks.
 - **Key Actions:** Record daily attendance, input student exam scores, and check subject timetable grids.
 
@@ -170,6 +176,8 @@ EduSync AI implements Role-Based Access Control (RBAC) to ensure security and pr
 ---
 
 ### 4.7 Student Portal & AI Tutor
+![Student Dashboard](docs/images/student_01_dashboard.png)
+
 - **GUI Overview:** Student workspace showing class schedules, attendance percentage, active GPA, assignment submission dropzones, and the Google Gemini 1.5 Flash AI Tutor chatbot.
 - **Key Actions:** Chat with AI Tutor for homework help, submit assignment PDFs, and track transcript GPA.
 
@@ -178,6 +186,8 @@ EduSync AI implements Role-Based Access Control (RBAC) to ensure security and pr
 ---
 
 ### 4.8 Parent & Guardian Portal
+![Parent Dashboard](docs/images/parent_01_dashboard.png)
+
 - **GUI Overview:** Transparent portal for guardians to monitor their ward's academic standing, attendance alerts, fee invoices, and download official payment receipts.
 - **Key Actions:** Pay tuition fees in INR (₹), download PDF receipts, and communicate with class teachers.
 
@@ -186,6 +196,8 @@ EduSync AI implements Role-Based Access Control (RBAC) to ensure security and pr
 ---
 
 ### 4.9 Accountant & Financial Desk
+![Accountant Dashboard](docs/images/accountant_01_dashboard.png)
+
 - **GUI Overview:** Financial management suite displaying total collected revenue, pending tuition dues, monthly collection graphs, and invoice generator tools.
 - **Key Actions:** Issue student fee invoices, record manual payments, and export transaction ledgers.
 
